@@ -5,7 +5,8 @@
   "description": "AI-powered LinkedIn feed filter that learns from your preferences",
   "permissions": [
     "storage",
-    "activeTab"
+    "activeTab",
+    "scripting"
   ],
   "host_permissions": [
     "https://www.linkedin.com/*",

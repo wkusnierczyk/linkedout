@@ -2,21 +2,24 @@
 
 /* ─── Filtered Post Overlay ────────────────────────────────────── */
 
+.lpf-filtered > *:not(.lpf-badge) {
+  display: none;
+}
+
 .lpf-filtered {
   position: relative;
-  opacity: 0.15;
-  transition: opacity 0.3s ease;
-  pointer-events: none;
 }
 
 .lpf-filtered .lpf-badge {
-  pointer-events: auto;
   opacity: 1;
 }
 
+.lpf-filtered--revealed > *:not(.lpf-badge) {
+  display: revert;
+}
+
 .lpf-filtered--revealed {
-  opacity: 1;
-  pointer-events: auto;
+  opacity: 0.7;
 }
 
 .lpf-filtered--revealed .lpf-badge {
@@ -26,11 +29,8 @@
 /* ─── Filter Badge ─────────────────────────────────────────────── */
 
 .lpf-badge {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 100;
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -70,7 +70,13 @@
   color: #a0a0b0;
 }
 
-.lpf-badge__show {
+.lpf-badge__buttons {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.lpf-badge__btn {
   background: none;
   border: 1px solid #445;
   color: #a0a0b0;
@@ -79,13 +85,30 @@
   border-radius: 4px;
   font-size: 14px;
   transition: all 0.2s;
-  flex-shrink: 0;
 }
 
-.lpf-badge__show:hover {
+.lpf-badge__btn--preview:hover {
+  background: #445;
+  color: #fff;
+  border-color: #556;
+}
+
+.lpf-badge__btn--approve:hover {
   background: #e94560;
   color: #fff;
   border-color: #e94560;
+}
+
+.lpf-badge__btn--reject:hover {
+  background: #2ed573;
+  color: #0f0f1a;
+  border-color: #2ed573;
+}
+
+.lpf-badge__confirmed {
+  font-size: 11px;
+  color: #2ed573;
+  font-weight: 600;
 }
 
 /* ─── Toggle Button ────────────────────────────────────────────── */
@@ -313,12 +336,31 @@
 }
 
 .lpf-review-card__preview {
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: 13px;
+  line-height: 1.6;
   color: #8888a0;
-  margin-bottom: 8px;
-  max-height: 4.5em;
+  margin-bottom: 4px;
+  white-space: pre-wrap;
   overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.lpf-review-card__preview--collapsed {
+  max-height: 4.8em;
+}
+
+.lpf-review-card__expand {
+  background: none;
+  border: none;
+  color: #e94560;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 8px;
+}
+
+.lpf-review-card__expand:hover {
+  text-decoration: underline;
 }
 
 .lpf-review-card__reason {

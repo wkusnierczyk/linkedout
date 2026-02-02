@@ -1,5 +1,6 @@
 // LinkedIn Post Filter — Content Script
 // Injects into LinkedIn pages to extract posts, observe interactions, and show filter UI.
+// Uses aria-label and structural detection since LinkedIn uses obfuscated class names.
 
 (function () {
   'use strict';
@@ -12,57 +13,6 @@
   const BATCH_DELAY_MS = 3000;       // wait this long after last new post before classifying
   const MIN_POST_LENGTH = 30;        // ignore very short posts
   const POST_PREVIEW_LEN = 280;      // characters shown in review panel
-
-  // LinkedIn DOM selectors — multiple fallbacks since LI changes these
-  const SELECTORS = {
-    feedPost: [
-      'div.feed-shared-update-v2',
-      'div[data-id*="urn:li:activity"]',
-      'div[data-urn*="urn:li:activity"]',
-      'article[data-id]',
-    ],
-    postText: [
-      '.feed-shared-update-v2__description .update-components-text span[dir="ltr"]',
-      '.update-components-text span[dir="ltr"]',
-      '.feed-shared-text span[dir="ltr"]',
-      '.feed-shared-update-v2__description span.break-words',
-      '.update-components-text .break-words',
-      '.feed-shared-text .break-words',
-    ],
-    postAuthor: [
-      '.update-components-actor__name span[aria-hidden="true"]',
-      '.feed-shared-actor__name span[aria-hidden="true"]',
-      '.update-components-actor__title span',
-      'a.update-components-actor__meta-link span',
-    ],
-    postUrn: [
-      '[data-urn]',
-      '[data-id]',
-    ],
-    likeButton: [
-      'button[aria-label*="Like"]',
-      'button.react-button__trigger',
-      'button[aria-label*="like"]',
-    ],
-    commentButton: [
-      'button[aria-label*="Comment"]',
-      'button[aria-label*="comment"]',
-    ],
-    repostButton: [
-      'button[aria-label*="Repost"]',
-      'button[aria-label*="repost"]',
-      'button[aria-label*="Share"]',
-    ],
-    menuButton: [
-      'button.feed-shared-control-menu__trigger',
-      'button[aria-label*="more actions"]',
-      'button[aria-label*="More actions"]',
-    ],
-    menuItems: [
-      '.feed-shared-control-menu__content button',
-      '[role="menuitem"]',
-    ],
-  };
 
   // ─── State ───────────────────────────────────────────────────────
 
@@ -77,37 +27,6 @@
 
   // ─── DOM Utilities ───────────────────────────────────────────────
 
-  function q(el, selectorList) {
-    if (typeof selectorList === 'string') selectorList = [selectorList];
-    for (const sel of selectorList) {
-      const found = el.querySelector(sel);
-      if (found) return found;
-    }
-    return null;
-  }
-
-  function qAll(el, selectorList) {
-    if (typeof selectorList === 'string') selectorList = [selectorList];
-    for (const sel of selectorList) {
-      const found = el.querySelectorAll(sel);
-      if (found.length > 0) return Array.from(found);
-    }
-    return [];
-  }
-
-  function getPostId(el) {
-    for (const sel of SELECTORS.postUrn) {
-      const node = el.matches(sel) ? el : el.querySelector(sel);
-      if (node) {
-        const urn = node.getAttribute('data-urn') || node.getAttribute('data-id') || '';
-        if (urn) return urn;
-      }
-    }
-    // Fallback: hash the first 200 chars of text content
-    const text = (el.textContent || '').trim().slice(0, 200);
-    return 'hash_' + simpleHash(text);
-  }
-
   function simpleHash(str) {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
@@ -116,59 +35,135 @@
     return Math.abs(hash).toString(36);
   }
 
-  function getPostText(el) {
-    const textEl = q(el, SELECTORS.postText);
-    if (textEl) return textEl.textContent.trim();
-    // Fallback: get all text from the description area
-    const desc = el.querySelector('.feed-shared-update-v2__description-wrapper')
-      || el.querySelector('.update-components-text');
-    if (desc) return desc.textContent.trim();
-    return '';
+  // ─── Post Detection (structural / aria-based) ────────────────────
+
+  function isPostElement(element) {
+    // A post has a reaction button and is a direct child of the feed list
+    const buttons = element.querySelectorAll('button');
+    let hasReaction = false;
+    for (const button of buttons) {
+      const label = button.getAttribute('aria-label') || '';
+      if (label.startsWith('Reaction button state:')) {
+        hasReaction = true;
+        break;
+      }
+    }
+    return hasReaction;
   }
 
-  function getPostAuthor(el) {
-    const authorEl = q(el, SELECTORS.postAuthor);
-    return authorEl ? authorEl.textContent.trim() : 'Unknown';
+  function findFeedList() {
+    // The feed is inside <main>. Find the center column (the one with reaction buttons),
+    // then find the child container with many children.
+    const main = document.querySelector('main');
+    if (!main) return null;
+
+    // Find the deepest container with 4+ children inside main
+    function findRepeatingContainer(element, depth) {
+      if (depth > 15) return null;
+      for (const child of element.children) {
+        if (child.children.length >= 4) {
+          // Verify at least some children look like posts
+          const childArray = Array.from(child.children);
+          const postLikeCount = childArray.filter(c => isPostElement(c)).length;
+          if (postLikeCount >= 1) {
+            return child;
+          }
+        }
+        const deeper = findRepeatingContainer(child, depth + 1);
+        if (deeper) return deeper;
+      }
+      return null;
+    }
+
+    return findRepeatingContainer(main, 0);
+  }
+
+  function findAllPosts() {
+    const feedList = findFeedList();
+    if (!feedList) return [];
+
+    return Array.from(feedList.children).filter(child => isPostElement(child));
+  }
+
+  function getPostId(element) {
+    // Try data attributes first
+    const urnNode = element.querySelector('[data-urn]') || element.querySelector('[data-id]');
+    if (urnNode) {
+      const urn = urnNode.getAttribute('data-urn') || urnNode.getAttribute('data-id') || '';
+      if (urn) return urn;
+    }
+    // Fallback: hash the text content
+    const text = (element.textContent || '').trim().slice(0, 200);
+    return 'hash_' + simpleHash(text);
+  }
+
+  function getPostText(element) {
+    // The post text is in span[dir="ltr"] elements, or we can look for the
+    // longest meaningful text block that isn't button/author text.
+    // First try span[dir="ltr"] which LinkedIn uses for post body text
+    const ltrSpans = element.querySelectorAll('span[dir="ltr"]');
+    if (ltrSpans.length > 0) {
+      // Concatenate all ltr spans that have meaningful length
+      const texts = Array.from(ltrSpans)
+        .map(span => span.textContent.trim())
+        .filter(text => text.length > 15);
+      if (texts.length > 0) return texts.join(' ');
+    }
+
+    // Fallback: find the longest text node that isn't a button label
+    const candidates = element.querySelectorAll('span, p, div');
+    let longestText = '';
+    for (const node of candidates) {
+      // Skip if it's inside a button
+      if (node.closest('button')) continue;
+      const text = node.textContent.trim();
+      if (text.length > longestText.length && text.length < 3000) {
+        longestText = text;
+      }
+    }
+    return longestText;
+  }
+
+  function getPostAuthor(element) {
+    // Author is in the first link pointing to /in/ or /company/
+    const authorLink = element.querySelector('a[href*="/in/"], a[href*="/company/"]');
+    if (authorLink) {
+      return authorLink.textContent.trim().replace(/\s+/g, ' ').slice(0, 60);
+    }
+    return 'Unknown';
   }
 
   // ─── Post Extraction ────────────────────────────────────────────
 
-  function findAllPosts() {
-    for (const sel of SELECTORS.feedPost) {
-      const posts = document.querySelectorAll(sel);
-      if (posts.length > 0) return Array.from(posts);
-    }
-    return [];
-  }
-
-  function extractPostData(el) {
-    const id = getPostId(el);
-    const content = getPostText(el);
-    const author = getPostAuthor(el);
-    return { id, content, author, element: el };
+  function extractPostData(element) {
+    const id = getPostId(element);
+    const content = getPostText(element);
+    const author = getPostAuthor(element);
+    return { id, content, author, element };
   }
 
   function processNewPosts() {
     const allPosts = findAllPosts();
     const newPosts = [];
 
-    for (const el of allPosts) {
-      const id = getPostId(el);
+    for (const element of allPosts) {
+      const id = getPostId(element);
       if (state.processedPosts.has(id)) continue;
       state.processedPosts.add(id);
 
-      const data = extractPostData(el);
+      const data = extractPostData(element);
       if (data.content.length < MIN_POST_LENGTH) continue;
 
       // Tag the DOM element
-      el.dataset.lpfId = id;
+      element.dataset.lpfId = id;
       newPosts.push(data);
 
       // Attach interaction observers to this post
-      attachInteractionObservers(el, data);
+      attachInteractionObservers(element, data);
     }
 
     if (newPosts.length > 0) {
+      console.log(`[LPF] Found ${newPosts.length} new posts to classify.`);
       state.pendingPosts.push(...newPosts);
       scheduleBatchClassification();
     }
@@ -182,10 +177,10 @@
       if (state.pendingPosts.length === 0) return;
 
       const batch = state.pendingPosts.splice(0);
-      const payload = batch.map(p => ({
-        id: p.id,
-        content: p.content.slice(0, 1500), // limit content sent to API
-        author: p.author,
+      const payload = batch.map(postData => ({
+        id: postData.id,
+        content: postData.content.slice(0, 1500),
+        author: postData.author,
       }));
 
       updateBadge('…');
@@ -196,7 +191,7 @@
       });
 
       if (response.error) {
-        console.warn('Classification error:', response.error);
+        console.warn('[LPF] Classification error:', response.error);
         showToast(response.error, 'error');
         updateBadge('!');
         return;
@@ -219,111 +214,136 @@
   // ─── Filter Visuals ─────────────────────────────────────────────
 
   function applyFilterVisual(postId, classification) {
-    const el = document.querySelector(`[data-lpf-id="${postId}"]`);
-    if (!el) return;
+    const element = document.querySelector(`[data-lpf-id="${postId}"]`);
+    if (!element) return;
 
-    el.classList.add('lpf-filtered');
+    element.classList.add('lpf-filtered');
 
-    // Add filter badge if not already present
-    if (!el.querySelector('.lpf-badge')) {
+    if (!element.querySelector('.lpf-badge')) {
       const badge = document.createElement('div');
       badge.className = 'lpf-badge';
       badge.innerHTML = `
         <span class="lpf-badge__icon">⊘</span>
         <span class="lpf-badge__label">${escHtml(classification.category || 'filtered')}</span>
         <span class="lpf-badge__reason">${escHtml(classification.reason || '')}</span>
-        <button class="lpf-badge__show" title="Show this post">👁</button>
+        <div class="lpf-badge__buttons">
+          <button class="lpf-badge__btn lpf-badge__btn--preview" title="Preview this post">👁</button>
+          <button class="lpf-badge__btn lpf-badge__btn--reject" title="Keep this post">＋</button>
+          <button class="lpf-badge__btn lpf-badge__btn--approve" title="Remove this post">－</button>
+        </div>
       `;
 
-      badge.querySelector('.lpf-badge__show').addEventListener('click', (e) => {
-        e.stopPropagation();
-        el.classList.toggle('lpf-filtered--revealed');
+      badge.querySelector('.lpf-badge__btn--preview').addEventListener('click', (event) => {
+        event.stopPropagation();
+        element.classList.toggle('lpf-filtered--revealed');
       });
 
-      el.style.position = 'relative';
-      el.prepend(badge);
+      badge.querySelector('.lpf-badge__btn--approve').addEventListener('click', (event) => {
+        event.stopPropagation();
+        const content = getPostText(element);
+        const author = getPostAuthor(element);
+        chrome.runtime.sendMessage({
+          type: 'recordFeedback',
+          postId, content: content.slice(0, 500), author,
+          category: classification?.category,
+          feedback: 'approved',
+        });
+        element.classList.remove('lpf-filtered--revealed');
+        badge.querySelector('.lpf-badge__buttons').innerHTML = '<span class="lpf-badge__confirmed">Confirmed</span>';
+        showToast('Filter confirmed', 'info');
+      });
+
+      badge.querySelector('.lpf-badge__btn--reject').addEventListener('click', (event) => {
+        event.stopPropagation();
+        const content = getPostText(element);
+        const author = getPostAuthor(element);
+        chrome.runtime.sendMessage({
+          type: 'recordFeedback',
+          postId, content: content.slice(0, 500), author,
+          category: classification?.category,
+          feedback: 'rejected',
+        });
+        removeFilterVisual(postId);
+        state.classifications[postId] = { ...classification, filter: false };
+        showToast('Post restored', 'info');
+        updateBadge(
+          String(Object.values(state.classifications).filter(c => c.filter).length)
+        );
+      });
+
+      element.prepend(badge);
     }
   }
 
   function removeFilterVisual(postId) {
-    const el = document.querySelector(`[data-lpf-id="${postId}"]`);
-    if (!el) return;
-    el.classList.remove('lpf-filtered', 'lpf-filtered--revealed');
-    const badge = el.querySelector('.lpf-badge');
+    const element = document.querySelector(`[data-lpf-id="${postId}"]`);
+    if (!element) return;
+    element.classList.remove('lpf-filtered', 'lpf-filtered--revealed');
+    const badge = element.querySelector('.lpf-badge');
     if (badge) badge.remove();
   }
 
   // ─── Interaction Observation ────────────────────────────────────
 
-  function attachInteractionObservers(postEl, postData) {
-    // Like button
-    const likeBtn = q(postEl, SELECTORS.likeButton);
-    if (likeBtn) {
-      likeBtn.addEventListener('click', () => {
-        // Small delay to let LinkedIn update the state
-        setTimeout(() => {
-          const wasLiked = likeBtn.getAttribute('aria-pressed') === 'true'
-            || likeBtn.classList.contains('react-button--active');
-          if (wasLiked) {
-            sendInteraction(postData, 'liked');
-          }
-        }, 500);
-      }, { capture: true });
-    }
+  function attachInteractionObservers(postElement, postData) {
+    // Reaction (like) button — identified by aria-label
+    const allButtons = postElement.querySelectorAll('button');
 
-    // Comment button (just opening — actual comment submission is harder to track)
-    const commentBtn = q(postEl, SELECTORS.commentButton);
-    if (commentBtn) {
-      commentBtn.addEventListener('click', () => {
-        // We'll observe the comment form for submission
-        setTimeout(() => observeCommentSubmission(postEl, postData), 500);
-      }, { capture: true });
-    }
+    for (const button of allButtons) {
+      const label = button.getAttribute('aria-label') || '';
 
-    // Repost button
-    const repostBtn = q(postEl, SELECTORS.repostButton);
-    if (repostBtn) {
-      repostBtn.addEventListener('click', () => {
-        sendInteraction(postData, 'shared');
-      }, { capture: true });
-    }
+      if (label.startsWith('Reaction button state:')) {
+        button.addEventListener('click', () => {
+          setTimeout(() => {
+            const currentLabel = button.getAttribute('aria-label') || '';
+            if (!currentLabel.includes('no reaction')) {
+              sendInteraction(postData, 'liked');
+            }
+          }, 500);
+        }, { capture: true });
+      }
 
-    // Three-dot menu (hide, unfollow)
-    const menuBtn = q(postEl, SELECTORS.menuButton);
-    if (menuBtn) {
-      menuBtn.addEventListener('click', () => {
-        setTimeout(() => observeMenuActions(postEl, postData), 300);
-      }, { capture: true });
+      if (label === 'Comment') {
+        button.addEventListener('click', () => {
+          setTimeout(() => observeCommentSubmission(postElement, postData), 500);
+        }, { capture: true });
+      }
+
+      if (label === 'Repost') {
+        button.addEventListener('click', () => {
+          sendInteraction(postData, 'shared');
+        }, { capture: true });
+      }
+
+      if (label === 'View more options') {
+        button.addEventListener('click', () => {
+          setTimeout(() => observeMenuActions(postElement, postData), 300);
+        }, { capture: true });
+      }
+
+      if (label === 'Hide Post') {
+        button.addEventListener('click', () => {
+          sendInteraction(postData, 'hidden');
+        }, { capture: true });
+      }
     }
   }
 
-  function observeCommentSubmission(postEl, postData) {
-    const form = postEl.querySelector('.comments-comment-box form, .comments-comment-texteditor');
-    if (!form) return;
-
+  function observeCommentSubmission(postElement, postData) {
     const submitObserver = new MutationObserver(() => {
-      // Look for newly added comments
-      const comments = postEl.querySelectorAll('.comments-comment-item, .comments-comment-entity');
-      if (comments.length > 0) {
-        sendInteraction(postData, 'commented');
-        submitObserver.disconnect();
-      }
+      // Look for comment-like new content
+      sendInteraction(postData, 'commented');
+      submitObserver.disconnect();
     });
 
-    submitObserver.observe(postEl, { childList: true, subtree: true });
-    // Clean up after 60 seconds
+    submitObserver.observe(postElement, { childList: true, subtree: true });
     setTimeout(() => submitObserver.disconnect(), 60000);
   }
 
-  function observeMenuActions(postEl, postData) {
-    // Watch for menu items appearing in the document
+  function observeMenuActions(postElement, postData) {
     const checkMenu = () => {
-      const items = document.querySelectorAll(
-        '.feed-shared-control-menu__content button, ' +
-        '[role="menu"] [role="menuitem"], ' +
-        '.artdeco-dropdown__content button'
-      );
-      for (const item of items) {
+      const menuItems = document.querySelectorAll('[role="menu"] [role="menuitem"], [role="menuitem"]');
+      for (const item of menuItems) {
         const text = (item.textContent || '').toLowerCase();
         if (text.includes("don't want to see") || text.includes('hide') || text.includes('not interested')) {
           item.addEventListener('click', () => sendInteraction(postData, 'hidden'), { once: true });
@@ -335,7 +355,6 @@
     };
 
     checkMenu();
-    // Also check again shortly in case the menu is still loading
     setTimeout(checkMenu, 300);
   }
 
@@ -357,9 +376,9 @@
     panel.id = 'lpf-panel';
     panel.innerHTML = `
       <div id="lpf-panel__header">
-        <h3>🔍 Post Filter</h3>
+        <h3>LinkedOut</h3>
         <div id="lpf-panel__actions">
-          <button id="lpf-panel__classify-btn" title="Classify visible posts now">⟳ Scan</button>
+          <button id="lpf-panel__classify-btn" title="Classify visible posts now">Scan</button>
           <button id="lpf-panel__close-btn" title="Close panel">✕</button>
         </div>
       </div>
@@ -383,13 +402,13 @@
   }
 
   function createToggleButton() {
-    const btn = document.createElement('button');
-    btn.id = 'lpf-toggle';
-    btn.innerHTML = '<span class="lpf-toggle__icon">⊘</span><span class="lpf-toggle__count" id="lpf-badge-count"></span>';
-    btn.title = 'Open LinkedIn Post Filter';
-    btn.addEventListener('click', togglePanel);
-    document.body.appendChild(btn);
-    return btn;
+    const button = document.createElement('button');
+    button.id = 'lpf-toggle';
+    button.innerHTML = '<span class="lpf-toggle__icon">⊘</span><span class="lpf-toggle__count" id="lpf-badge-count"></span>';
+    button.title = 'Open LinkedIn Post Filter';
+    button.addEventListener('click', togglePanel);
+    document.body.appendChild(button);
+    return button;
   }
 
   function togglePanel() {
@@ -401,14 +420,14 @@
 
   function renderPanelContent() {
     const filtered = Object.entries(state.classifications)
-      .filter(([, c]) => c.filter)
+      .filter(([, classification]) => classification.filter)
       .sort((a, b) => (b[1].confidence || 0) - (a[1].confidence || 0));
 
-    const statsEl = document.getElementById('lpf-panel__stats');
-    const listEl = document.getElementById('lpf-panel__list');
-    const emptyEl = document.getElementById('lpf-panel__empty');
+    const statsElement = document.getElementById('lpf-panel__stats');
+    const listElement = document.getElementById('lpf-panel__list');
+    const emptyElement = document.getElementById('lpf-panel__empty');
 
-    statsEl.innerHTML = `
+    statsElement.innerHTML = `
       <div class="lpf-stat">
         <strong>${Object.keys(state.classifications).length}</strong> scanned
       </div>
@@ -418,29 +437,32 @@
     `;
 
     if (filtered.length === 0) {
-      listEl.innerHTML = '';
-      emptyEl.style.display = 'block';
+      listElement.innerHTML = '';
+      emptyElement.style.display = 'block';
       return;
     }
 
-    emptyEl.style.display = 'none';
-    listEl.innerHTML = filtered.map(([id, c]) => {
-      const postEl = document.querySelector(`[data-lpf-id="${id}"]`);
-      const content = postEl ? getPostText(postEl) : '(post no longer visible)';
-      const author = postEl ? getPostAuthor(postEl) : 'Unknown';
+    emptyElement.style.display = 'none';
+    listElement.innerHTML = filtered.map(([id, classification]) => {
+      const postElement = document.querySelector(`[data-lpf-id="${id}"]`);
+      const content = postElement ? getPostText(postElement) : '(post no longer visible)';
+      const author = postElement ? getPostAuthor(postElement) : 'Unknown';
       const preview = content.slice(0, POST_PREVIEW_LEN) + (content.length > POST_PREVIEW_LEN ? '…' : '');
-      const confidencePct = Math.round((c.confidence || 0) * 100);
+      const confidencePercent = Math.round((classification.confidence || 0) * 100);
+
+      const fullContent = escHtml(content.slice(0, 1500));
 
       return `
         <div class="lpf-review-card" data-post-id="${escAttr(id)}">
           <div class="lpf-review-card__header">
             <span class="lpf-review-card__author">${escHtml(author)}</span>
-            <span class="lpf-review-card__category">${escHtml(c.category || 'unknown')}</span>
+            <span class="lpf-review-card__category">${escHtml(classification.category || 'unknown')}</span>
           </div>
-          <div class="lpf-review-card__preview">${escHtml(preview)}</div>
+          <div class="lpf-review-card__preview lpf-review-card__preview--collapsed">${fullContent}</div>
+          <button class="lpf-review-card__expand">Show more</button>
           <div class="lpf-review-card__reason">
-            <em>${escHtml(c.reason || '')}</em>
-            <span class="lpf-review-card__confidence">${confidencePct}%</span>
+            <em>${escHtml(classification.reason || '')}</em>
+            <span class="lpf-review-card__confidence">${confidencePercent}%</span>
           </div>
           <div class="lpf-review-card__actions">
             <button class="lpf-btn lpf-btn--approve" data-action="approve" data-post-id="${escAttr(id)}" title="Yes, filter this">
@@ -457,27 +479,36 @@
       `;
     }).join('');
 
-    // Attach event handlers
-    listEl.querySelectorAll('[data-action]').forEach(btn => {
-      btn.addEventListener('click', handleReviewAction);
+    listElement.querySelectorAll('[data-action]').forEach(button => {
+      button.addEventListener('click', handleReviewAction);
+    });
+
+    listElement.querySelectorAll('.lpf-review-card__expand').forEach(button => {
+      button.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const card = button.closest('.lpf-review-card');
+        const preview = card.querySelector('.lpf-review-card__preview');
+        const collapsed = preview.classList.toggle('lpf-review-card__preview--collapsed');
+        button.textContent = collapsed ? 'Show more' : 'Show less';
+      });
     });
   }
 
-  function handleReviewAction(e) {
-    const btn = e.currentTarget;
-    const action = btn.dataset.action;
-    const postId = btn.dataset.postId;
+  function handleReviewAction(event) {
+    const button = event.currentTarget;
+    const action = button.dataset.action;
+    const postId = button.dataset.postId;
     const classification = state.classifications[postId];
 
     if (action === 'scroll') {
-      const el = document.querySelector(`[data-lpf-id="${postId}"]`);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const element = document.querySelector(`[data-lpf-id="${postId}"]`);
+      if (element) element.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
 
-    const postEl = document.querySelector(`[data-lpf-id="${postId}"]`);
-    const content = postEl ? getPostText(postEl) : '';
-    const author = postEl ? getPostAuthor(postEl) : 'Unknown';
+    const postElement = document.querySelector(`[data-lpf-id="${postId}"]`);
+    const content = postElement ? getPostText(postElement) : '';
+    const author = postElement ? getPostAuthor(postElement) : 'Unknown';
     const feedback = action === 'approve' ? 'approved' : 'rejected';
 
     chrome.runtime.sendMessage({
@@ -488,22 +519,18 @@
     });
 
     if (action === 'reject') {
-      // User disagrees — unhide the post
       removeFilterVisual(postId);
       state.classifications[postId] = { ...classification, filter: false };
       showToast('Post restored', 'info');
     } else {
-      // User agrees — keep it hidden
       showToast('Filter confirmed', 'info');
     }
 
-    // Remove the card from the panel with animation
-    const card = btn.closest('.lpf-review-card');
+    const card = button.closest('.lpf-review-card');
     if (card) {
       card.classList.add('lpf-review-card--dismissed');
       setTimeout(() => {
         card.remove();
-        // Update count
         const remaining = document.querySelectorAll('#lpf-panel__list .lpf-review-card:not(.lpf-review-card--dismissed)');
         if (remaining.length === 0) {
           document.getElementById('lpf-panel__empty').style.display = 'block';
@@ -517,10 +544,10 @@
   }
 
   function updateBadge(text) {
-    const el = document.getElementById('lpf-badge-count');
-    if (el) {
-      el.textContent = text || '';
-      el.style.display = text ? 'flex' : 'none';
+    const element = document.getElementById('lpf-badge-count');
+    if (element) {
+      element.textContent = text || '';
+      element.style.display = text ? 'flex' : 'none';
     }
   }
 
@@ -548,37 +575,34 @@
 
   // ─── HTML Escaping ──────────────────────────────────────────────
 
-  function escHtml(s) {
+  function escHtml(string) {
     const div = document.createElement('div');
-    div.textContent = s;
+    div.textContent = string;
     return div.innerHTML;
   }
 
-  function escAttr(s) {
-    return s.replace(/[&"'<>]/g, c => ({
+  function escAttr(string) {
+    return string.replace(/[&"'<>]/g, character => ({
       '&': '&amp;', '"': '&quot;', "'": '&#39;', '<': '&lt;', '>': '&gt;'
-    })[c]);
+    })[character]);
   }
 
   // ─── Initialization ─────────────────────────────────────────────
 
   async function init() {
-    // Check if extension is enabled
     const settings = await chrome.runtime.sendMessage({ type: 'getSettings' });
     state.enabled = settings?.enabled !== false;
 
     if (!state.enabled) {
-      console.log('LinkedIn Post Filter is disabled.');
+      console.log('[LPF] LinkedIn Post Filter is disabled.');
       return;
     }
 
-    // Check API key
     const { configured } = await chrome.runtime.sendMessage({ type: 'checkApiKey' });
     if (!configured) {
-      showToast('LinkedIn Post Filter: Please set your API key in extension options.', 'error');
+      showToast('LinkedOut: Please set your API key in extension options.', 'error');
     }
 
-    // Create UI
     createToggleButton();
     createReviewPanel();
 
@@ -597,40 +621,33 @@
       if (hasNewNodes) processNewPosts();
     });
 
-    // Observe the feed container, or fall back to body
-    const feedContainer =
-      document.querySelector('.scaffold-finite-scroll__content') ||
-      document.querySelector('.core-rail') ||
-      document.querySelector('main') ||
-      document.body;
-
+    const feedContainer = document.querySelector('main') || document.body;
     observer.observe(feedContainer, { childList: true, subtree: true });
 
-    console.log('LinkedIn Post Filter initialized.');
+    console.log('[LPF] LinkedIn Post Filter initialized.');
   }
 
   // ─── Message listener (for popup/options communication) ─────────
 
-  chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-    if (msg.type === 'toggleEnabled') {
-      state.enabled = msg.enabled;
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.type === 'toggleEnabled') {
+      state.enabled = message.enabled;
       if (!state.enabled) {
-        // Remove all filter visuals
-        document.querySelectorAll('.lpf-filtered').forEach(el => {
-          el.classList.remove('lpf-filtered', 'lpf-filtered--revealed');
-          const badge = el.querySelector('.lpf-badge');
+        document.querySelectorAll('.lpf-filtered').forEach(element => {
+          element.classList.remove('lpf-filtered', 'lpf-filtered--revealed');
+          const badge = element.querySelector('.lpf-badge');
           if (badge) badge.remove();
         });
       }
       sendResponse({ ok: true });
     }
-    if (msg.type === 'rescanFeed') {
+    if (message.type === 'rescanFeed') {
       state.processedPosts.clear();
       state.pendingPosts = [];
       state.classifications = {};
-      document.querySelectorAll('.lpf-filtered').forEach(el => {
-        el.classList.remove('lpf-filtered', 'lpf-filtered--revealed');
-        const badge = el.querySelector('.lpf-badge');
+      document.querySelectorAll('.lpf-filtered').forEach(element => {
+        element.classList.remove('lpf-filtered', 'lpf-filtered--revealed');
+        const badge = element.querySelector('.lpf-badge');
         if (badge) badge.remove();
       });
       processNewPosts();
