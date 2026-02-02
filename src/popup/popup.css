@@ -1,0 +1,124 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  width: 320px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #0f0f1a;
+  color: #e0e0e0;
+}
+
+#popup { padding: 16px; }
+
+#header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+#header h1 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+}
+
+/* Toggle switch */
+.toggle { position: relative; width: 40px; height: 22px; cursor: pointer; }
+.toggle input { display: none; }
+.toggle__slider {
+  position: absolute; inset: 0;
+  background: #334;
+  border-radius: 11px;
+  transition: background 0.2s;
+}
+.toggle__slider::after {
+  content: '';
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 16px; height: 16px;
+  background: #888;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+.toggle input:checked + .toggle__slider { background: #e94560; }
+.toggle input:checked + .toggle__slider::after {
+  transform: translateX(18px);
+  background: #fff;
+}
+
+/* Warning */
+.warning {
+  background: #2d1020;
+  color: #e94560;
+  border: 1px solid #e94560;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+.warning a { color: #ff6b81; }
+
+/* Stats */
+#stats {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.stat {
+  flex: 1;
+  text-align: center;
+  padding: 8px 4px;
+  background: #1a1a2e;
+  border-radius: 8px;
+  font-size: 11px;
+  color: #8888a0;
+}
+.stat span {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  color: #e94560;
+  margin-bottom: 2px;
+}
+
+/* Categories */
+#categories {
+  margin-bottom: 14px;
+}
+.cat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid #1a1a2e;
+  font-size: 13px;
+}
+.cat-row label { cursor: pointer; }
+.cat-row input[type="checkbox"] {
+  accent-color: #e94560;
+  width: 16px; height: 16px;
+  cursor: pointer;
+}
+
+/* Actions */
+#actions {
+  display: flex;
+  gap: 8px;
+}
+#actions button {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #334;
+  background: #1a1a2e;
+  color: #a0a0b0;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+#actions button:hover {
+  background: #e94560;
+  color: #fff;
+  border-color: #e94560;
+}

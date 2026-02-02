@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>LinkedOut Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div id="app">
+    <h1>LinkedOut Settings</h1>
+
+    <section>
+      <h2>API Key</h2>
+      <div class="field">
+        <input type="password" id="api-key" placeholder="sk-ant-...">
+        <button id="save-key-btn">Save</button>
+      </div>
+      <p id="key-status" class="hint"></p>
+    </section>
+
+    <section>
+      <h2>Model</h2>
+      <select id="model-select">
+        <option value="claude-sonnet-4-20250514">Sonnet 4 (recommended)</option>
+        <option value="claude-haiku-4-20250414">Haiku 4 (cheaper)</option>
+      </select>
+    </section>
+
+    <section>
+      <h2>Sensitivity</h2>
+      <div class="radio-group">
+        <label><input type="radio" name="sensitivity" value="low"> Low — only obvious matches</label>
+        <label><input type="radio" name="sensitivity" value="medium" checked> Medium — balanced</label>
+        <label><input type="radio" name="sensitivity" value="high"> High — aggressive filtering</label>
+      </div>
+    </section>
+
+    <section>
+      <h2>Filter Categories</h2>
+      <div id="categories"></div>
+    </section>
+
+    <section>
+      <h2>Custom Categories</h2>
+      <div id="custom-categories"></div>
+      <div class="field" id="add-custom">
+        <input type="text" id="custom-id" placeholder="category_id">
+        <input type="text" id="custom-label" placeholder="Label">
+        <input type="text" id="custom-desc" placeholder="Description">
+        <button id="add-custom-btn">Add</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Keyword Triggers</h2>
+      <p class="hint">Posts containing these words/phrases will be filtered regardless of AI classification.</p>
+      <div class="field">
+        <input type="text" id="keyword-input" placeholder="Add keyword...">
+        <button id="add-keyword-btn">Add</button>
+      </div>
+      <div id="keywords"></div>
+    </section>
+
+    <section>
+      <h2>Learned Preference Profile</h2>
+      <div id="profile-box" class="profile-box">No profile generated yet. Use the extension and provide feedback to build one.</div>
+      <p id="profile-updated" class="hint"></p>
+      <button id="regen-profile-btn">Regenerate Now</button>
+    </section>
+
+    <section>
+      <h2>Data</h2>
+      <div class="button-row">
+        <button id="export-btn">Export Data</button>
+        <button id="clear-btn" class="danger">Clear All Data</button>
+      </div>
+    </section>
+  </div>
+  <script src="options.js"></script>
+</body>
+</html>
