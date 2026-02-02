@@ -1,0 +1,19 @@
+# Secrets
+*.key
+
+# Archives
+*.zip
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Node (in case dependencies are added later)
+node_modules/
