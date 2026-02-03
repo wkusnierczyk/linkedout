@@ -435,7 +435,7 @@
       <div id="lpf-panel__header">
         <h3>LinkedOut</h3>
         <div id="lpf-panel__actions">
-          <button id="lpf-panel__classify-btn" title="Classify visible posts now">Scan</button>
+          <button id="lpf-panel__classify-btn" title="Rescan visible posts">Rescan</button>
           <button id="lpf-panel__close-btn" title="Close panel">✕</button>
         </div>
       </div>
