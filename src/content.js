@@ -12,7 +12,6 @@
 
   const BATCH_DELAY_MS = 3000; // wait this long after last new post before classifying
   const MIN_POST_LENGTH = 30; // ignore very short posts
-  const POST_PREVIEW_LEN = 280; // characters shown in review panel
   const INIT_RETRY_DELAY_MS = 500; // delay between init retries
   const INIT_MAX_RETRIES = 20; // max retries waiting for feed (10 seconds total)
 
@@ -40,7 +39,10 @@
     try {
       return await chrome.runtime.sendMessage(message);
     } catch (err) {
-      if (err.message?.includes('Extension context invalidated')) {
+      if (
+        err.message?.includes('Extension context invalidated') ||
+        err.message?.includes('message channel closed')
+      ) {
         state.contextValid = false;
         state.enabled = false;
         showToast('Extension reloaded. Please refresh the page.', 'error');
@@ -202,11 +204,18 @@
       if (state.pendingPosts.length === 0) return;
 
       const batch = state.pendingPosts.splice(0);
-      const payload = batch.map((postData) => ({
-        id: postData.id,
-        content: postData.content.slice(0, 1500),
-        author: postData.author,
-      }));
+      const postDataById = {};
+      const payload = batch.map((postData) => {
+        postDataById[postData.id] = {
+          content: postData.content.slice(0, 1500),
+          author: postData.author,
+        };
+        return {
+          id: postData.id,
+          content: postData.content.slice(0, 1500),
+          author: postData.author,
+        };
+      });
 
       updateBadge('…');
       state.scanning = true;
@@ -231,10 +240,15 @@
 
       let filterCount = 0;
       for (const result of response.results) {
-        state.classifications[result.id] = result;
+        const postData = postDataById[result.id] || {};
+        state.classifications[result.id] = {
+          ...result,
+          content: postData.content,
+          author: postData.author,
+        };
         if (result.filter) {
           filterCount++;
-          applyFilterVisual(result.id, result);
+          applyFilterVisual(result.id, state.classifications[result.id]);
         }
       }
 
@@ -521,11 +535,8 @@
     emptyElement.style.display = 'none';
     listElement.innerHTML = filtered
       .map(([id, classification]) => {
-        const postElement = document.querySelector(`[data-lpf-id="${id}"]`);
-        const content = postElement ? getPostText(postElement) : '(post no longer visible)';
-        const author = postElement ? getPostAuthor(postElement) : 'Unknown';
-        const _preview =
-          content.slice(0, POST_PREVIEW_LEN) + (content.length > POST_PREVIEW_LEN ? '…' : '');
+        const content = classification.content || '(no content)';
+        const author = classification.author || 'Unknown';
         const confidencePercent = Math.round((classification.confidence || 0) * 100);
 
         const fullContent = escHtml(content.slice(0, 1500));
