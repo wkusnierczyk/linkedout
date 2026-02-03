@@ -1,0 +1,25 @@
+# Secrets
+*.key
+
+# Archives
+*.zip
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Audit trail
+CLAUDE_AUDIT.md
+
+# Node
+node_modules/
+
+# Test coverage
+coverage/
