@@ -36,10 +36,7 @@ LinkedOut is currently in a prototyping phase.
 
 ## Known Issues
 
-| Issue | Description |
-|-------|-------------|
-| [#6](../../issues/6) | "More" link to expand truncated posts doesn't work on filtered posts |
-| [#8](../../issues/8) | Posts with certain emoji/Unicode characters cause API errors |
+See [Known Limitations](#known-limitations) and [Roadmap](#roadmap) for the full list of issues and planned features.
 
 ## Setup
 
@@ -186,6 +183,24 @@ Using Haiku instead of Sonnet reduces costs by ~5×.
 
 ## Development
 
+### Make Targets
+
+The project uses a Makefile for common development tasks. Variables can be overridden (e.g., `make lint NPM=pnpm`).
+
+| Target | Description |
+|--------|-------------|
+| `make install` | Install dependencies |
+| `make lint` | Run ESLint on source files |
+| `make lint-fix` | Run ESLint with auto-fix |
+| `make format` | Format code with Prettier |
+| `make format-check` | Check formatting without changes |
+| `make test` | Run tests |
+| `make test-watch` | Run tests in watch mode |
+| `make test-coverage` | Run tests with coverage report |
+| `make check` | Run all checks (format, lint, test) |
+| `make clean` | Remove `node_modules/` and `coverage/` |
+| `make help` | Show all available targets |
+
 ### LinkedIn DOM Resilience
 
 LinkedIn frequently changes their DOM structure. The extension uses structural detection rather than brittle CSS selectors:
@@ -210,12 +225,50 @@ See [#4](../../issues/4) for planned self-healing capability.
 - **New interaction types**: Add detection logic in `attachInteractionObservers()` in `content.js`
 - **Custom classification models**: Modify the `classifyPosts()` function in `background.js`
 
-## Limitations
+## Known Limitations
 
-- LinkedIn's DOM structure may change, requiring detection logic updates (see [#4](../../issues/4) for planned self-healing)
-- Classification quality depends on the AI model and prompt
-- No way to filter posts before they briefly appear (there's a flash before classification completes)
-- Browser extension storage has limits (~5MB for `chrome.storage.local`); history is automatically trimmed
+| Limitation | Description |
+|------------|-------------|
+| **Virtual scrolling** | LinkedIn destroys and recreates DOM elements as you scroll. If you scroll away from a filtered post and back, the badge may be gone. The classification is preserved but the visual state is lost until rescan. See [#27](../../issues/27). |
+| **Brief flash before filtering** | Posts appear momentarily before classification completes. There's no way to intercept posts before they render. |
+| **DOM structure changes** | LinkedIn frequently updates their DOM. When this breaks detection, manual updates to `content.js` are needed until self-healing is implemented ([#4](../../issues/4)). |
+| **Storage limits** | Chrome extension storage is limited to ~5MB. Feedback history is automatically trimmed to stay within bounds. |
+| **Model-dependent quality** | Classification accuracy depends on the Claude model and prompt. Haiku is faster/cheaper but less accurate than Sonnet. |
+| **Extension reload requires page refresh** | If the extension is reloaded or updated, existing LinkedIn tabs need to be refreshed to reconnect. |
+
+## Roadmap
+
+### Planned Features
+
+| Priority | Issue | Feature |
+|----------|-------|---------|
+| High | [#4](../../issues/4) | Self-diagnosing and self-healing DOM parsing |
+| High | [#19](../../issues/19) | Cache classifications locally to avoid redundant API calls |
+| Medium | [#5](../../issues/5) | Inline re-categorization with category selector |
+| Medium | [#7](../../issues/7) | Reversible feedback with color-coded banners |
+| Medium | [#10](../../issues/10) | Support multiple categories per post |
+| Medium | [#20](../../issues/20) | Support novel categories proposed by Claude |
+| Medium | [#25](../../issues/25) | Statistics page with time-binned analytics |
+| Medium | [#26](../../issues/26) | Unified iconography for filter actions |
+| Medium | [#27](../../issues/27) | Re-apply badges on scroll (virtual scroll resilience) |
+| Low | [#3](../../issues/3) | Mobile version |
+| Low | [#11](../../issues/11) | Local pattern matching fallback (no LLM required) |
+| Low | [#12](../../issues/12) | Legal considerations documentation |
+
+### Open Bugs
+
+| Issue | Description |
+|-------|-------------|
+| [#6](../../issues/6) | Cannot expand filtered post content — "more" link doesn't work |
+
+### Recently Completed
+
+| Issue | Feature |
+|-------|---------|
+| [#9](../../issues/9) | Category labels display properly (sentence case) |
+| [#13](../../issues/13) | Extension activation reliability on SPA navigation |
+| [#15](../../issues/15) | "Scanning..." status indicator in review panel |
+| [#21](../../issues/21) | Categories sorted alphabetically in popup and settings |
 
 ## License
 
