@@ -18,5 +18,8 @@ Thumbs.db
 # Audit trail
 CLAUDE_AUDIT.md
 
-# Node (in case dependencies are added later)
+# Node
 node_modules/
+
+# Test coverage
+coverage/

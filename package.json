@@ -1,0 +1,23 @@
+{
+  "name": "linkedout",
+  "version": "1.0.0",
+  "description": "AI-powered LinkedIn feed filter that learns from your preferences",
+  "type": "module",
+  "scripts": {
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^2.1.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.4.0",
+    "vitest": "^2.1.0"
+  },
+  "license": "MIT"
+}
