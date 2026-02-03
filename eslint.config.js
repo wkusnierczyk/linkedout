@@ -24,6 +24,7 @@ export default [
         MutationObserver: 'readonly',
         location: 'readonly',
         Blob: 'readonly',
+        CSS: 'readonly',
         confirm: 'readonly',
         alert: 'readonly',
         // Chrome extension globals

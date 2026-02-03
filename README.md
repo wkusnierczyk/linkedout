@@ -36,33 +36,14 @@ LinkedOut is currently in a prototyping phase.
 
 ## Known Issues
 
-| Issue | Description |
-|-------|-------------|
-| [#6](../../issues/6) | "More" link to expand truncated posts doesn't work on filtered posts |
-| [#8](../../issues/8) | Posts with certain emoji/Unicode characters cause API errors |
+See [Known Limitations](#known-limitations) and [Roadmap](#roadmap) for the full list of issues and planned features.
 
-## Setup
+## Quick Start
 
-### 1. Install the Extension
-
-1. Open Chrome and navigate to `chrome://extensions`
-2. Enable **Developer mode** (toggle in the top-right)
-3. Click **Load unpacked** and select this `linkedin-post-filter` directory
-4. The extension icon (⊘) should appear in your toolbar
-
-### 2. Configure API Key
-
-1. Click the extension icon → **⚙ Settings** (or right-click → Options)
-2. Enter your [Anthropic API key](https://console.anthropic.com/settings/keys)
-3. Choose a model (Sonnet 4 recommended for quality, Haiku 4.5 for cost savings)
-4. Click **Save API Key**
-
-### 3. Start Filtering
-
-1. Navigate to [LinkedIn](https://www.linkedin.com/feed)
-2. Posts will be automatically scanned as they appear
-3. A floating ⊘ button in the bottom-right shows the filter count
-4. Click it to open the review panel
+1. **Install**: Load the extension in Chrome Developer mode (see [Installing the Prototype](#installing-the-prototype))
+2. **Configure**: Click ⊘ → Settings → enter your [Anthropic API key](https://console.anthropic.com/settings/keys)
+3. **Browse**: Go to [LinkedIn](https://www.linkedin.com/feed) — posts are scanned automatically
+4. **Review**: Click the floating ⊘ button to see filtered posts and provide feedback
 
 ## Architecture
 
@@ -122,30 +103,110 @@ linkedin-post-filter/
 
 ## Usage
 
-### Popup Controls
+### Installing the Prototype
 
-| Control | Description |
-| --- | --- |
-| Toggle | Enable/disable the filter |
-| Category checkboxes | Quick toggle for each filter category |
-| Rescan Feed | Re-process all visible posts |
-| Settings | Open the full options page |
+This is a development build, not published to the Chrome Web Store.
+
+1. Clone or download this repository
+2. Open Chrome → `chrome://extensions`
+3. Enable **Developer mode** (toggle top-right)
+4. Click **Load unpacked** → select the repository folder
+5. The ⊘ icon appears in your toolbar
+
+To update after pulling changes: go to `chrome://extensions` and click the refresh icon on the LinkedOut card, then refresh any open LinkedIn tabs.
+
+### Enabling/Disabling
+
+**Quick toggle** (toolbar popup):
+1. Click the ⊘ extension icon in your toolbar
+2. Toggle the **Enabled** switch at the top
+
+When disabled, all filter badges are removed and no scanning occurs. Your feedback history and settings are preserved.
+
+### Configuring Categories
+
+**From the popup** (quick access):
+1. Click the ⊘ extension icon
+2. Check/uncheck categories to enable/disable them
+3. Changes apply immediately to new scans
+
+**From Settings** (full control):
+1. Click the ⊘ icon → **⚙ Settings**, or right-click the icon → **Options**
+2. Scroll to **Filter Categories** to toggle built-in categories
+3. Scroll to **Custom Categories** to add your own:
+   - **ID**: Internal identifier (lowercase, underscores)
+   - **Label**: Display name shown in badges
+   - **Description**: Explains to Claude what this category means
+
+### Filter Badges (On Posts)
+
+When a post is filtered, a badge appears at the top of the post:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ ⊘  [CATEGORY]  Reason for filtering...        👁  ＋  －    │
+├─────────────────────────────────────────────────────────────┤
+│                    (post content hidden)                    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+| Element | Description |
+|---------|-------------|
+| **⊘** | Filter icon |
+| **[CATEGORY]** | The matched category (e.g., "Thought Leadership") |
+| **Reason** | Claude's explanation for why this post was filtered |
+| **👁 Preview** | Toggle post visibility — peek at the content without approving |
+| **＋ Keep** | Reject the filter — restore the post and train the model that this was a mistake |
+| **－ Filter** | Confirm the filter — keep it hidden and train the model that this was correct |
+
+After you click **＋** or **－**, the buttons are replaced with a status label (**Confirmed** or **Rejected**).
 
 ### Review Panel
 
-Click the floating ⊘ button on LinkedIn to open the review panel.
+Click the floating **⊘** button (bottom-right of LinkedIn) to open the review panel.
 
-| Action | Description |
-| --- | --- |
-| **✓ Filter** | Confirm the post should be filtered (trains the model) |
-| **✗ Keep** | Reject the filter decision and restore the post |
-| **↓** | Scroll to the post in the feed |
+```
+┌──────────────────────────────────────┐
+│  LinkedOut              [Rescan] [✕] │
+├──────────────────────────────────────┤
+│  12 scanned   3 filtered             │
+├──────────────────────────────────────┤
+│  ┌────────────────────────────────┐  │
+│  │ Author Name      [CATEGORY]   │  │
+│  │ Post preview text here...     │  │
+│  │ Reason • 87%                  │  │
+│  │ [✓ Filter]  [✗ Keep]  [↓]     │  │
+│  └────────────────────────────────┘  │
+│  ...                                 │
+└──────────────────────────────────────┘
+```
+
+**Header actions:**
+| Button | Description |
+|--------|-------------|
+| **Rescan** | Clear all classifications and re-scan visible posts |
+| **✕** | Close the panel |
+
+**Stats bar:**
+- **X scanned**: Total posts analyzed in this session
+- **Y filtered**: Posts currently filtered (pending + confirmed)
+- **Scanning...**: Appears when classification is in progress
+
+**Card actions:**
+| Button | Description |
+|--------|-------------|
+| **✓ Filter** | Confirm the filter decision (trains the model) |
+| **✗ Keep** | Reject the filter and restore the post |
+| **↓** | Scroll to this post in the feed |
+
+After confirming or rejecting, the card shows a status label and dims slightly. The corresponding badge on the post updates to match.
 
 ### Filter Categories
 
-Built-in categories:
+Built-in categories (all enabled by default):
+
 | Category | Description |
-|---|---|
+|----------|-------------|
 | AI-Generated | Formulaic, buzzword-heavy posts that read as AI-written |
 | Thought Leadership | Motivational platitudes, humble brags, LinkedIn-speak |
 | Engagement Bait | "Agree?", polls with obvious answers, manufactured controversy |
@@ -154,15 +215,28 @@ Built-in categories:
 | Rage Bait | Intentionally provocative or outrage-inducing content |
 | Corporate Fluff | Empty corporate announcements, press releases |
 
-You can add custom categories with your own descriptions in Settings.
-
 ### Sensitivity Levels
 
 | Level | Behavior |
-|---|---|
-| Low | Only filters posts that very clearly match (fewer false positives, more noise) |
+|-------|----------|
+| Low | Only filters posts that very clearly match (fewer false positives, more noise gets through) |
 | Medium | Balanced (recommended) |
-| High | Aggressively filters anything that plausibly matches (more false positives, cleaner feed) |
+| High | Aggressively filters anything that plausibly matches (cleaner feed, more false positives) |
+
+### Settings Page
+
+Access via toolbar popup → **⚙ Settings** or right-click extension → **Options**.
+
+| Section | Options |
+|---------|---------|
+| **API Key** | Enter your Anthropic API key |
+| **Model** | Choose Claude model (Sonnet 4 for quality, Haiku 4.5 for cost) |
+| **Sensitivity** | Low / Medium / High filtering threshold |
+| **Filter Categories** | Toggle built-in categories on/off |
+| **Custom Categories** | Add your own filter categories |
+| **Custom Keywords** | Add trigger words that always flag posts |
+| **Preference Profile** | View/regenerate your learned preference summary |
+| **Data** | Export all data as JSON, or clear history |
 
 ## Cost Estimate
 
@@ -185,6 +259,24 @@ Using Haiku instead of Sonnet reduces costs by ~5×.
 - You can export or delete all data from Settings
 
 ## Development
+
+### Make Targets
+
+The project uses a Makefile for common development tasks. Variables can be overridden (e.g., `make lint NPM=pnpm`).
+
+| Target | Description |
+|--------|-------------|
+| `make install` | Install dependencies |
+| `make lint` | Run ESLint on source files |
+| `make lint-fix` | Run ESLint with auto-fix |
+| `make format` | Format code with Prettier |
+| `make format-check` | Check formatting without changes |
+| `make test` | Run tests |
+| `make test-watch` | Run tests in watch mode |
+| `make test-coverage` | Run tests with coverage report |
+| `make check` | Run all checks (format, lint, test) |
+| `make clean` | Remove `node_modules/` and `coverage/` |
+| `make help` | Show all available targets |
 
 ### LinkedIn DOM Resilience
 
@@ -210,12 +302,50 @@ See [#4](../../issues/4) for planned self-healing capability.
 - **New interaction types**: Add detection logic in `attachInteractionObservers()` in `content.js`
 - **Custom classification models**: Modify the `classifyPosts()` function in `background.js`
 
-## Limitations
+## Known Limitations
 
-- LinkedIn's DOM structure may change, requiring detection logic updates (see [#4](../../issues/4) for planned self-healing)
-- Classification quality depends on the AI model and prompt
-- No way to filter posts before they briefly appear (there's a flash before classification completes)
-- Browser extension storage has limits (~5MB for `chrome.storage.local`); history is automatically trimmed
+| Limitation | Description |
+|------------|-------------|
+| **Virtual scrolling** | LinkedIn destroys and recreates DOM elements as you scroll. If you scroll away from a filtered post and back, the badge may be gone. The classification is preserved but the visual state is lost until rescan. See [#27](../../issues/27). |
+| **Brief flash before filtering** | Posts appear momentarily before classification completes. There's no way to intercept posts before they render. |
+| **DOM structure changes** | LinkedIn frequently updates their DOM. When this breaks detection, manual updates to `content.js` are needed until self-healing is implemented ([#4](../../issues/4)). |
+| **Storage limits** | Chrome extension storage is limited to ~5MB. Feedback history is automatically trimmed to stay within bounds. |
+| **Model-dependent quality** | Classification accuracy depends on the Claude model and prompt. Haiku is faster/cheaper but less accurate than Sonnet. |
+| **Extension reload requires page refresh** | If the extension is reloaded or updated, existing LinkedIn tabs need to be refreshed to reconnect. |
+
+## Roadmap
+
+### Planned Features
+
+| Priority | Issue | Feature |
+|----------|-------|---------|
+| High | [#4](../../issues/4) | Self-diagnosing and self-healing DOM parsing |
+| High | [#19](../../issues/19) | Cache classifications locally to avoid redundant API calls |
+| Medium | [#5](../../issues/5) | Inline re-categorization with category selector |
+| Medium | [#7](../../issues/7) | Reversible feedback with color-coded banners |
+| Medium | [#10](../../issues/10) | Support multiple categories per post |
+| Medium | [#20](../../issues/20) | Support novel categories proposed by Claude |
+| Medium | [#25](../../issues/25) | Statistics page with time-binned analytics |
+| Medium | [#26](../../issues/26) | Unified iconography for filter actions |
+| Medium | [#27](../../issues/27) | Re-apply badges on scroll (virtual scroll resilience) |
+| Low | [#3](../../issues/3) | Mobile version |
+| Low | [#11](../../issues/11) | Local pattern matching fallback (no LLM required) |
+| Low | [#12](../../issues/12) | Legal considerations documentation |
+
+### Open Bugs
+
+| Issue | Description |
+|-------|-------------|
+| [#6](../../issues/6) | Cannot expand filtered post content — "more" link doesn't work |
+
+### Recently Completed
+
+| Issue | Feature |
+|-------|---------|
+| [#9](../../issues/9) | Category labels display properly (sentence case) |
+| [#13](../../issues/13) | Extension activation reliability on SPA navigation |
+| [#15](../../issues/15) | "Scanning..." status indicator in review panel |
+| [#21](../../issues/21) | Categories sorted alphabetically in popup and settings |
 
 ## License
 

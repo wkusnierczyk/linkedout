@@ -111,6 +111,12 @@
   font-weight: 600;
 }
 
+.lpf-badge__rejected {
+  font-size: 11px;
+  color: #ffa502;
+  font-weight: 600;
+}
+
 /* ─── Toggle Button ────────────────────────────────────────────── */
 
 #lpf-toggle {
@@ -232,6 +238,7 @@
 
 #lpf-panel__stats {
   display: flex;
+  align-items: baseline;
   gap: 12px;
   padding: 12px 20px;
   border-bottom: 1px solid #1a1a2e;
@@ -248,6 +255,22 @@
   font-size: 16px;
   font-weight: 700;
   margin-right: 4px;
+}
+
+.lpf-stat--scanning {
+  color: #4ecdc4;
+  font-weight: 600;
+  animation: lpf-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes lpf-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 /* ─── Panel Post List ──────────────────────────────────────────── */
@@ -309,6 +332,33 @@
   padding: 0;
   margin: 0;
   overflow: hidden;
+}
+
+.lpf-review-card--confirmed {
+  opacity: 0.6;
+  border-color: #2ed573;
+}
+
+.lpf-review-card--rejected {
+  opacity: 0.6;
+  border-color: #ffa502;
+}
+
+.lpf-review-card__status {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.lpf-review-card__status--confirmed {
+  color: #2ed573;
+  background: rgba(46, 213, 115, 0.15);
+}
+
+.lpf-review-card__status--rejected {
+  color: #ffa502;
+  background: rgba(255, 165, 2, 0.15);
 }
 
 .lpf-review-card__header {
