@@ -13,6 +13,8 @@
   const BATCH_DELAY_MS = 3000; // wait this long after last new post before classifying
   const MIN_POST_LENGTH = 30; // ignore very short posts
   const POST_PREVIEW_LEN = 280; // characters shown in review panel
+  const INIT_RETRY_DELAY_MS = 500; // delay between init retries
+  const INIT_MAX_RETRIES = 20; // max retries waiting for feed (10 seconds total)
 
   // ─── State ───────────────────────────────────────────────────────
 
@@ -23,7 +25,29 @@
     classifications: {}, // postId → classification result
     panelOpen: false,
     enabled: true,
+    initialized: false, // tracks if UI has been created
+    lastUrl: location.href, // for SPA navigation detection
+    contextValid: true, // tracks if extension context is still valid
   };
+
+  // ─── Safe Messaging ─────────────────────────────────────────────
+
+  async function sendMessage(message) {
+    if (!state.contextValid) {
+      return { error: 'context_invalidated' };
+    }
+    try {
+      return await chrome.runtime.sendMessage(message);
+    } catch (err) {
+      if (err.message?.includes('Extension context invalidated')) {
+        state.contextValid = false;
+        state.enabled = false;
+        showToast('Extension reloaded. Please refresh the page.', 'error');
+        return { error: 'context_invalidated' };
+      }
+      throw err;
+    }
+  }
 
   // ─── DOM Utilities ───────────────────────────────────────────────
 
@@ -185,12 +209,14 @@
 
       updateBadge('…');
 
-      const response = await chrome.runtime.sendMessage({
+      const response = await sendMessage({
         type: 'classifyPosts',
         posts: payload,
       });
 
-      if (response.error) {
+      if (response?.error === 'context_invalidated') return;
+
+      if (response?.error) {
         console.warn('[LPF] Classification error:', response.error);
         showToast(response.error, 'error');
         updateBadge('!');
@@ -242,7 +268,7 @@
         event.stopPropagation();
         const content = getPostText(element);
         const author = getPostAuthor(element);
-        chrome.runtime.sendMessage({
+        sendMessage({
           type: 'recordFeedback',
           postId,
           content: content.slice(0, 500),
@@ -260,7 +286,7 @@
         event.stopPropagation();
         const content = getPostText(element);
         const author = getPostAuthor(element);
-        chrome.runtime.sendMessage({
+        sendMessage({
           type: 'recordFeedback',
           postId,
           content: content.slice(0, 500),
@@ -390,7 +416,7 @@
   }
 
   function sendInteraction(postData, interaction) {
-    chrome.runtime.sendMessage({
+    sendMessage({
       type: 'recordInteraction',
       postId: postData.id,
       content: postData.content.slice(0, 500),
@@ -409,7 +435,7 @@
       <div id="lpf-panel__header">
         <h3>LinkedOut</h3>
         <div id="lpf-panel__actions">
-          <button id="lpf-panel__classify-btn" title="Classify visible posts now">Scan</button>
+          <button id="lpf-panel__classify-btn" title="Rescan visible posts">Rescan</button>
           <button id="lpf-panel__close-btn" title="Close panel">✕</button>
         </div>
       </div>
@@ -426,6 +452,13 @@
     document.getElementById('lpf-panel__classify-btn').addEventListener('click', () => {
       state.processedPosts.clear();
       state.pendingPosts = [];
+      state.classifications = {};
+      // Remove existing filter visuals
+      document.querySelectorAll('.lpf-filtered').forEach((element) => {
+        element.classList.remove('lpf-filtered', 'lpf-filtered--revealed');
+        const badge = element.querySelector('.lpf-badge');
+        if (badge) badge.remove();
+      });
       processNewPosts();
     });
 
@@ -546,7 +579,7 @@
     const author = postElement ? getPostAuthor(postElement) : 'Unknown';
     const feedback = action === 'approve' ? 'approved' : 'rejected';
 
-    chrome.runtime.sendMessage({
+    sendMessage({
       type: 'recordFeedback',
       postId,
       content: content.slice(0, 500),
@@ -634,8 +667,35 @@
 
   // ─── Initialization ─────────────────────────────────────────────
 
+  function isOnFeedPage() {
+    const path = location.pathname;
+    return path === '/' || path.startsWith('/feed');
+  }
+
+  async function waitForFeed(maxRetries = INIT_MAX_RETRIES) {
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      const feed = findFeedList();
+      if (feed) {
+        console.log(`[LPF] Feed found after ${attempt + 1} attempt(s).`);
+        return true;
+      }
+      await new Promise((r) => setTimeout(r, INIT_RETRY_DELAY_MS));
+    }
+    console.log('[LPF] Feed not found after retries.');
+    return false;
+  }
+
   async function init() {
-    const settings = await chrome.runtime.sendMessage({ type: 'getSettings' });
+    // Skip if already initialized or not on a feed page
+    if (state.initialized) {
+      console.log('[LPF] Already initialized.');
+      return;
+    }
+
+    // Get settings via safe messaging
+    const settings = await sendMessage({ type: 'getSettings' });
+    if (settings?.error === 'context_invalidated') return;
+
     state.enabled = settings?.enabled !== false;
 
     if (!state.enabled) {
@@ -643,19 +703,30 @@
       return;
     }
 
-    const { configured } = await chrome.runtime.sendMessage({ type: 'checkApiKey' });
-    if (!configured) {
+    // Check API key
+    const apiCheck = await sendMessage({ type: 'checkApiKey' });
+    if (apiCheck?.error === 'context_invalidated') return;
+
+    if (!apiCheck?.configured) {
       showToast('LinkedOut: Please set your API key in extension options.', 'error');
     }
 
+    // Create UI elements (always, so button is visible)
     createToggleButton();
     createReviewPanel();
+    state.initialized = true;
 
-    // Process posts already on page
-    processNewPosts();
+    // If on feed page, wait for feed and start processing
+    if (isOnFeedPage()) {
+      const feedFound = await waitForFeed();
+      if (feedFound) {
+        processNewPosts();
+      }
+    }
 
     // Watch for new posts (infinite scroll)
     const observer = new MutationObserver((mutations) => {
+      if (!state.contextValid) return;
       let hasNewNodes = false;
       for (const mutation of mutations) {
         if (mutation.addedNodes.length > 0) {
@@ -669,7 +740,36 @@
     const feedContainer = document.querySelector('main') || document.body;
     observer.observe(feedContainer, { childList: true, subtree: true });
 
+    // Watch for SPA navigation
+    setupSpaNavigationDetection();
+
     console.log('[LPF] LinkedIn Post Filter initialized.');
+  }
+
+  function setupSpaNavigationDetection() {
+    // Detect URL changes (SPA navigation)
+    const urlObserver = new MutationObserver(() => {
+      if (location.href !== state.lastUrl) {
+        const wasOnFeed = state.lastUrl.includes('/feed') || state.lastUrl.endsWith('.com/');
+        const nowOnFeed = isOnFeedPage();
+        state.lastUrl = location.href;
+
+        console.log(`[LPF] SPA navigation detected: ${location.pathname}`);
+
+        // If navigated to feed, re-scan for posts
+        if (nowOnFeed && !wasOnFeed) {
+          console.log('[LPF] Navigated to feed, scanning for posts...');
+          waitForFeed().then((found) => {
+            if (found) processNewPosts();
+          });
+        } else if (nowOnFeed) {
+          // Still on feed, just process any new posts
+          processNewPosts();
+        }
+      }
+    });
+
+    urlObserver.observe(document.body, { childList: true, subtree: true });
   }
 
   // ─── Message listener (for popup/options communication) ─────────
