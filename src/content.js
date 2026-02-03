@@ -259,8 +259,13 @@
 
   // ─── Filter Visuals ─────────────────────────────────────────────
 
+  function findPostElement(postId) {
+    // CSS.escape handles special characters in the postId (e.g., colons in URNs)
+    return document.querySelector(`[data-lpf-id="${CSS.escape(postId)}"]`);
+  }
+
   function applyFilterVisual(postId, classification) {
-    const element = document.querySelector(`[data-lpf-id="${postId}"]`);
+    const element = findPostElement(postId);
     if (!element) return;
 
     element.classList.add('lpf-filtered');
@@ -611,12 +616,12 @@
     const classification = state.classifications[postId];
 
     if (action === 'scroll') {
-      const element = document.querySelector(`[data-lpf-id="${postId}"]`);
+      const element = findPostElement(postId);
       if (element) element.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
 
-    const postElement = document.querySelector(`[data-lpf-id="${postId}"]`);
+    const postElement = findPostElement(postId);
     const content = postElement ? getPostText(postElement) : '';
     const author = postElement ? getPostAuthor(postElement) : 'Unknown';
     const feedback = action === 'approve' ? 'approved' : 'rejected';
