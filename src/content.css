@@ -232,6 +232,7 @@
 
 #lpf-panel__stats {
   display: flex;
+  align-items: baseline;
   gap: 12px;
   padding: 12px 20px;
   border-bottom: 1px solid #1a1a2e;
