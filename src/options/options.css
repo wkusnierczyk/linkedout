@@ -1,4 +1,8 @@
-* { margin: 0; padding: 0; box-sizing: border-box; }
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -40,8 +44,8 @@ section {
   gap: 8px;
 }
 
-input[type="text"],
-input[type="password"],
+input[type='text'],
+input[type='password'],
 select {
   flex: 1;
   padding: 8px 12px;
@@ -52,12 +56,15 @@ select {
   font-size: 13px;
 }
 
-input:focus, select:focus {
+input:focus,
+select:focus {
   outline: none;
   border-color: #e94560;
 }
 
-select { cursor: pointer; }
+select {
+  cursor: pointer;
+}
 
 button {
   padding: 8px 16px;
@@ -77,8 +84,14 @@ button:hover {
   border-color: #e94560;
 }
 
-button.danger { border-color: #e94560; color: #e94560; }
-button.danger:hover { background: #e94560; color: #fff; }
+button.danger {
+  border-color: #e94560;
+  color: #e94560;
+}
+button.danger:hover {
+  background: #e94560;
+  color: #fff;
+}
 
 .hint {
   font-size: 12px;
@@ -93,7 +106,10 @@ button.danger:hover { background: #e94560; color: #fff; }
   cursor: pointer;
 }
 
-.radio-group input { accent-color: #e94560; margin-right: 6px; }
+.radio-group input {
+  accent-color: #e94560;
+  margin-right: 6px;
+}
 
 /* Category rows */
 .cat-row {
@@ -104,10 +120,13 @@ button.danger:hover { background: #e94560; color: #fff; }
   border-bottom: 1px solid #1a1a2e;
   font-size: 13px;
 }
-.cat-row:last-child { border-bottom: none; }
-.cat-row input[type="checkbox"] {
+.cat-row:last-child {
+  border-bottom: none;
+}
+.cat-row input[type='checkbox'] {
   accent-color: #e94560;
-  width: 16px; height: 16px;
+  width: 16px;
+  height: 16px;
   cursor: pointer;
 }
 .cat-desc {
@@ -141,7 +160,10 @@ button.danger:hover { background: #e94560; color: #fff; }
   cursor: pointer;
   line-height: 1;
 }
-.keyword-tag button:hover { color: #ff6b81; background: none; }
+.keyword-tag button:hover {
+  color: #ff6b81;
+  background: none;
+}
 
 /* Profile */
 .profile-box {
@@ -157,6 +179,11 @@ button.danger:hover { background: #e94560; color: #fff; }
   margin-bottom: 8px;
 }
 
-.button-row { display: flex; gap: 8px; }
+.button-row {
+  display: flex;
+  gap: 8px;
+}
 
-#add-custom { margin-top: 10px; }
+#add-custom {
+  margin-top: 10px;
+}

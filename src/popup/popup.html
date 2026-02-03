@@ -1,36 +1,36 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <link rel="stylesheet" href="popup.css">
-</head>
-<body>
-  <div id="popup">
-    <div id="header">
-      <h1>LinkedOut</h1>
-      <label class="toggle">
-        <input type="checkbox" id="enabled-toggle" checked>
-        <span class="toggle__slider"></span>
-      </label>
-    </div>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div id="popup">
+      <div id="header">
+        <h1>LinkedOut</h1>
+        <label class="toggle">
+          <input type="checkbox" id="enabled-toggle" checked />
+          <span class="toggle__slider"></span>
+        </label>
+      </div>
 
-    <div id="api-warning" class="warning" hidden>
-      No API key configured. <a href="#" id="open-options-link">Set it up</a>
-    </div>
+      <div id="api-warning" class="warning" hidden>
+        No API key configured. <a href="#" id="open-options-link">Set it up</a>
+      </div>
 
-    <div id="stats">
-      <div class="stat"><span id="stat-filtered">0</span> filtered</div>
-      <div class="stat"><span id="stat-approved">0</span> confirmed</div>
-      <div class="stat"><span id="stat-rejected">0</span> restored</div>
-    </div>
+      <div id="stats">
+        <div class="stat"><span id="stat-filtered">0</span> filtered</div>
+        <div class="stat"><span id="stat-approved">0</span> confirmed</div>
+        <div class="stat"><span id="stat-rejected">0</span> restored</div>
+      </div>
 
-    <div id="categories"></div>
+      <div id="categories"></div>
 
-    <div id="actions">
-      <button id="rescan-btn">Rescan Feed</button>
-      <button id="settings-btn">Settings</button>
+      <div id="actions">
+        <button id="rescan-btn">Rescan Feed</button>
+        <button id="settings-btn">Settings</button>
+      </div>
     </div>
-  </div>
-  <script src="popup.js"></script>
-</body>
+    <script src="popup.js"></script>
+  </body>
 </html>

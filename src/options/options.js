@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function renderCustomCategories() {
     customEl.innerHTML = '';
-    for (const cat of (settings.customCategories || [])) {
+    for (const cat of settings.customCategories || []) {
       const row = document.createElement('div');
       row.className = 'cat-row';
       row.innerHTML = `
@@ -71,9 +71,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       `;
       customEl.appendChild(row);
     }
-    customEl.querySelectorAll('[data-remove]').forEach(btn => {
+    customEl.querySelectorAll('[data-remove]').forEach((btn) => {
       btn.addEventListener('click', async () => {
-        settings.customCategories = (settings.customCategories || []).filter(c => c.id !== btn.dataset.remove);
+        settings.customCategories = (settings.customCategories || []).filter(
+          (c) => c.id !== btn.dataset.remove
+        );
         await chrome.runtime.sendMessage({ type: 'saveSettings', settings });
         renderCustomCategories();
       });
@@ -100,15 +102,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function renderKeywords() {
     keywordsEl.innerHTML = '';
-    for (const kw of (settings.customKeywords || [])) {
+    for (const kw of settings.customKeywords || []) {
       const tag = document.createElement('span');
       tag.className = 'keyword-tag';
       tag.innerHTML = `${kw} <button data-kw="${kw}">&times;</button>`;
       keywordsEl.appendChild(tag);
     }
-    keywordsEl.querySelectorAll('[data-kw]').forEach(btn => {
+    keywordsEl.querySelectorAll('[data-kw]').forEach((btn) => {
       btn.addEventListener('click', async () => {
-        settings.customKeywords = (settings.customKeywords || []).filter(k => k !== btn.dataset.kw);
+        settings.customKeywords = (settings.customKeywords || []).filter(
+          (k) => k !== btn.dataset.kw
+        );
         await chrome.runtime.sendMessage({ type: 'saveSettings', settings });
         renderKeywords();
       });
@@ -132,7 +136,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ─── Preference Profile ───────────────────────────────────────
   const profileBox = document.getElementById('profile-box');
   const profileUpdated = document.getElementById('profile-updated');
-  const { profile, lastUpdated } = await chrome.runtime.sendMessage({ type: 'getPreferenceProfile' });
+  const { profile, lastUpdated } = await chrome.runtime.sendMessage({
+    type: 'getPreferenceProfile',
+  });
   if (profile) {
     profileBox.textContent = profile;
     profileUpdated.textContent = `Last updated: ${new Date(lastUpdated).toLocaleString()}`;
@@ -160,7 +166,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   document.getElementById('clear-btn').addEventListener('click', async () => {
-    if (!confirm('This will delete all feedback history, interaction data, and your learned preference profile. Continue?')) return;
+    if (
+      !confirm(
+        'This will delete all feedback history, interaction data, and your learned preference profile. Continue?'
+      )
+    )
+      return;
     await chrome.runtime.sendMessage({ type: 'clearHistory' });
     profileBox.textContent = 'No profile generated yet.';
     profileUpdated.textContent = '';

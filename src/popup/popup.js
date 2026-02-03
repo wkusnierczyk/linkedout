@@ -23,7 +23,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Notify content script
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (tab?.id) {
-      chrome.tabs.sendMessage(tab.id, { type: 'toggleEnabled', enabled: settings.enabled }).catch(() => {});
+      chrome.tabs
+        .sendMessage(tab.id, { type: 'toggleEnabled', enabled: settings.enabled })
+        .catch(() => {});
     }
   });
 
@@ -34,7 +36,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Categories
   const allCats = { ...settings.categories };
-  for (const custom of (settings.customCategories || [])) {
+  for (const custom of settings.customCategories || []) {
     allCats[custom.id] = custom;
   }
 
@@ -54,7 +56,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (settings.categories[catId]) {
       settings.categories[catId].enabled = e.target.checked;
     } else {
-      const custom = (settings.customCategories || []).find(c => c.id === catId);
+      const custom = (settings.customCategories || []).find((c) => c.id === catId);
       if (custom) custom.enabled = e.target.checked;
     }
     await chrome.runtime.sendMessage({ type: 'saveSettings', settings });

@@ -8,13 +8,45 @@ const DEFAULT_SETTINGS = {
   autoClassify: true,
   sensitivity: 'medium', // low | medium | high
   categories: {
-    ai_generated:      { enabled: true,  label: 'AI-Generated',      description: 'Posts that read as AI-written: formulaic structure, buzzword-heavy, generic advice' },
-    thought_leadership: { enabled: true,  label: 'Thought Leadership', description: 'Schematic "thought leadership": motivational platitudes, humble brags dressed as insights, LinkedIn-speak' },
-    engagement_bait:   { enabled: true,  label: 'Engagement Bait',    description: 'Polls with obvious answers, "Agree?", ragebait, manufactured controversy for clicks' },
-    self_promotion:    { enabled: false, label: 'Self-Promotion',     description: 'Thinly-veiled product plugs, "excited to announce" humble brags, constant self-congratulation' },
-    politics:          { enabled: false, label: 'Politics',           description: 'Political commentary, partisan takes, government policy debates' },
-    rage_bait:         { enabled: true,  label: 'Rage Bait',          description: 'Intentionally provocative or outrage-inducing hot takes' },
-    corporate_fluff:   { enabled: false, label: 'Corporate Fluff',    description: 'Empty corporate announcements, "thrilled to share" press releases' },
+    ai_generated: {
+      enabled: true,
+      label: 'AI-Generated',
+      description:
+        'Posts that read as AI-written: formulaic structure, buzzword-heavy, generic advice',
+    },
+    thought_leadership: {
+      enabled: true,
+      label: 'Thought Leadership',
+      description:
+        'Schematic "thought leadership": motivational platitudes, humble brags dressed as insights, LinkedIn-speak',
+    },
+    engagement_bait: {
+      enabled: true,
+      label: 'Engagement Bait',
+      description:
+        'Polls with obvious answers, "Agree?", ragebait, manufactured controversy for clicks',
+    },
+    self_promotion: {
+      enabled: false,
+      label: 'Self-Promotion',
+      description:
+        'Thinly-veiled product plugs, "excited to announce" humble brags, constant self-congratulation',
+    },
+    politics: {
+      enabled: false,
+      label: 'Politics',
+      description: 'Political commentary, partisan takes, government policy debates',
+    },
+    rage_bait: {
+      enabled: true,
+      label: 'Rage Bait',
+      description: 'Intentionally provocative or outrage-inducing hot takes',
+    },
+    corporate_fluff: {
+      enabled: false,
+      label: 'Corporate Fluff',
+      description: 'Empty corporate announcements, "thrilled to share" press releases',
+    },
   },
   customCategories: [],
   customKeywords: [],
@@ -48,8 +80,9 @@ function sanitizeText(text) {
   if (!text) return '';
   // Remove orphaned high surrogates (not followed by low surrogate)
   // and orphaned low surrogates (not preceded by high surrogate)
-  return text.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, '\uFFFD')
-             .replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '\uFFFD');
+  return text
+    .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, '\uFFFD')
+    .replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '\uFFFD');
 }
 
 // ─── AI Classification ───────────────────────────────────────────────
@@ -61,27 +94,35 @@ function buildClassificationPrompt(posts, settings, preferenceProfile, recentFee
     .join('\n');
 
   const customCats = (settings.customCategories || [])
-    .filter(c => c.enabled)
-    .map(c => `- **${c.id}**: ${c.description}`)
+    .filter((c) => c.enabled)
+    .map((c) => `- **${c.id}**: ${c.description}`)
     .join('\n');
 
-  const keywords = (settings.customKeywords || []).length > 0
-    ? `\n## Keyword Triggers\nAlso filter posts containing these keywords/phrases: ${settings.customKeywords.join(', ')}`
-    : '';
+  const keywords =
+    (settings.customKeywords || []).length > 0
+      ? `\n## Keyword Triggers\nAlso filter posts containing these keywords/phrases: ${settings.customKeywords.join(', ')}`
+      : '';
 
-  const feedbackSection = recentFeedback.length > 0
-    ? `\n## Recent Feedback Examples\nHere are recent posts the user gave feedback on:\n${recentFeedback.map(f =>
-        `- [${f.feedback === 'approved' ? 'CORRECTLY FILTERED' : 'WRONGLY FILTERED'}] Category: ${f.category || 'none'} | "${sanitizeText(f.contentPreview)}"`
-      ).join('\n')}`
-    : '';
+  const feedbackSection =
+    recentFeedback.length > 0
+      ? `\n## Recent Feedback Examples\nHere are recent posts the user gave feedback on:\n${recentFeedback
+          .map(
+            (f) =>
+              `- [${f.feedback === 'approved' ? 'CORRECTLY FILTERED' : 'WRONGLY FILTERED'}] Category: ${f.category || 'none'} | "${sanitizeText(f.contentPreview)}"`
+          )
+          .join('\n')}`
+      : '';
 
   const profileSection = preferenceProfile
     ? `\n## Learned User Preferences\n${preferenceProfile}`
     : '';
 
-  const postsBlock = posts.map((p, i) => (
-    `### Post ${i} (id: ${p.id})\nAuthor: ${sanitizeText(p.author)}\n---\n${sanitizeText(p.content)}\n---`
-  )).join('\n\n');
+  const postsBlock = posts
+    .map(
+      (p, i) =>
+        `### Post ${i} (id: ${p.id})\nAuthor: ${sanitizeText(p.author)}\n---\n${sanitizeText(p.content)}\n---`
+    )
+    .join('\n\n');
 
   return `You are a LinkedIn post classifier. Analyze each post and determine whether it should be filtered from the user's feed.
 
@@ -122,12 +163,15 @@ async function classifyPosts(posts) {
 
   const settings = await getSettings();
   if (!settings.enabled) {
-    return { results: posts.map(p => ({ id: p.id, filter: false })) };
+    return { results: posts.map((p) => ({ id: p.id, filter: false })) };
   }
 
   // Gather learned context
-  const { preferenceProfile, feedbackHistory } = await getStorage(['preferenceProfile', 'feedbackHistory']);
-  const recent = (feedbackHistory || []).slice(-20).map(f => ({
+  const { preferenceProfile, feedbackHistory } = await getStorage([
+    'preferenceProfile',
+    'feedbackHistory',
+  ]);
+  const recent = (feedbackHistory || []).slice(-20).map((f) => ({
     feedback: f.feedback,
     category: f.category,
     contentPreview: (f.content || '').slice(0, 120),
@@ -159,12 +203,15 @@ async function classifyPosts(posts) {
 
     const data = await response.json();
     const text = data.content
-      .filter(b => b.type === 'text')
-      .map(b => b.text)
+      .filter((b) => b.type === 'text')
+      .map((b) => b.text)
       .join('');
 
     // Parse JSON — strip any accidental markdown fences
-    const clean = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+    const clean = text
+      .replace(/```json\s*/g, '')
+      .replace(/```\s*/g, '')
+      .trim();
     const results = JSON.parse(clean);
 
     // Store classification results
@@ -198,12 +245,16 @@ async function storeClassifications(posts, results) {
 
 async function recordFeedback(postId, content, author, category, feedback) {
   const { feedbackHistory = [], feedbackCountSinceRegen = 0 } = await getStorage([
-    'feedbackHistory', 'feedbackCountSinceRegen'
+    'feedbackHistory',
+    'feedbackCountSinceRegen',
   ]);
 
   feedbackHistory.push({
-    postId, content: (content || '').slice(0, 500), author,
-    category, feedback, // 'approved' | 'rejected'
+    postId,
+    content: (content || '').slice(0, 500),
+    author,
+    category,
+    feedback, // 'approved' | 'rejected'
     timestamp: Date.now(),
   });
 
@@ -229,7 +280,9 @@ async function recordInteraction(postId, content, author, interaction) {
   const { interactionHistory = [] } = await getStorage('interactionHistory');
 
   interactionHistory.push({
-    postId, content: (content || '').slice(0, 500), author,
+    postId,
+    content: (content || '').slice(0, 500),
+    author,
     interaction, // 'liked' | 'commented' | 'hidden' | 'unfollowed' | 'shared'
     timestamp: Date.now(),
   });
@@ -264,18 +317,24 @@ async function regeneratePreferenceProfile() {
   if (!apiKey) return;
 
   const { feedbackHistory = [], interactionHistory = [] } = await getStorage([
-    'feedbackHistory', 'interactionHistory'
+    'feedbackHistory',
+    'interactionHistory',
   ]);
 
   if (feedbackHistory.length + interactionHistory.length < 5) return; // not enough data
 
-  const feedbackSummary = feedbackHistory.slice(-100).map(f =>
-    `[${f.feedback}] category=${f.category || 'none'} | "${sanitizeText((f.content || '').slice(0, 150))}"`
-  ).join('\n');
+  const feedbackSummary = feedbackHistory
+    .slice(-100)
+    .map(
+      (f) =>
+        `[${f.feedback}] category=${f.category || 'none'} | "${sanitizeText((f.content || '').slice(0, 150))}"`
+    )
+    .join('\n');
 
-  const interactionSummary = interactionHistory.slice(-100).map(i =>
-    `[${i.interaction}] "${sanitizeText((i.content || '').slice(0, 150))}"`
-  ).join('\n');
+  const interactionSummary = interactionHistory
+    .slice(-100)
+    .map((i) => `[${i.interaction}] "${sanitizeText((i.content || '').slice(0, 150))}"`)
+    .join('\n');
 
   const prompt = `Analyze this LinkedIn user's feedback and interaction history to create a concise preference profile for post filtering.
 
@@ -314,8 +373,8 @@ Respond ONLY with the profile text, no preamble.`;
 
     const data = await response.json();
     const profile = data.content
-      .filter(b => b.type === 'text')
-      .map(b => b.text)
+      .filter((b) => b.type === 'text')
+      .map((b) => b.text)
       .join('');
 
     await setStorage({
@@ -339,10 +398,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false;
   }
   // All handlers are async, so we return true and call sendResponse later
-  handler(message, sender).then(sendResponse).catch(err => {
-    console.error(`Handler error [${message.type}]:`, err);
-    sendResponse({ error: err.message });
-  });
+  handler(message, sender)
+    .then(sendResponse)
+    .catch((err) => {
+      console.error(`Handler error [${message.type}]:`, err);
+      sendResponse({ error: err.message });
+    });
   return true; // keep the message channel open for async response
 });
 
@@ -371,14 +432,16 @@ const messageHandlers = {
   },
 
   async getStats() {
-    const { stats = { filtered: 0, approved: 0, rejected: 0, implicitKeep: 0, implicitFilter: 0 } } =
-      await getStorage('stats');
+    const {
+      stats = { filtered: 0, approved: 0, rejected: 0, implicitKeep: 0, implicitFilter: 0 },
+    } = await getStorage('stats');
     return stats;
   },
 
   async getPreferenceProfile() {
     const { preferenceProfile, profileLastUpdated } = await getStorage([
-      'preferenceProfile', 'profileLastUpdated'
+      'preferenceProfile',
+      'profileLastUpdated',
     ]);
     return { profile: preferenceProfile || null, lastUpdated: profileLastUpdated || null };
   },
@@ -386,14 +449,16 @@ const messageHandlers = {
   async regenerateProfile() {
     await regeneratePreferenceProfile();
     const { preferenceProfile, profileLastUpdated } = await getStorage([
-      'preferenceProfile', 'profileLastUpdated'
+      'preferenceProfile',
+      'profileLastUpdated',
     ]);
     return { profile: preferenceProfile, lastUpdated: profileLastUpdated };
   },
 
   async getHistory() {
     const { feedbackHistory = [], interactionHistory = [] } = await getStorage([
-      'feedbackHistory', 'interactionHistory'
+      'feedbackHistory',
+      'interactionHistory',
     ]);
     return { feedbackHistory, interactionHistory };
   },
@@ -413,8 +478,11 @@ const messageHandlers = {
 
   async exportData() {
     const data = await getStorage([
-      'settings', 'feedbackHistory', 'interactionHistory',
-      'preferenceProfile', 'stats'
+      'settings',
+      'feedbackHistory',
+      'interactionHistory',
+      'preferenceProfile',
+      'stats',
     ]);
     return data;
   },

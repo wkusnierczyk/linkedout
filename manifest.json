@@ -3,15 +3,8 @@
   "name": "LinkedIn Post Filter",
   "version": "1.0.0",
   "description": "AI-powered LinkedIn feed filter that learns from your preferences",
-  "permissions": [
-    "storage",
-    "activeTab",
-    "scripting"
-  ],
-  "host_permissions": [
-    "https://www.linkedin.com/*",
-    "https://api.anthropic.com/*"
-  ],
+  "permissions": ["storage", "activeTab", "scripting"],
+  "host_permissions": ["https://www.linkedin.com/*", "https://api.anthropic.com/*"],
   "background": {
     "service_worker": "src/background.js"
   },

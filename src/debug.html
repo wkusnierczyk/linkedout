@@ -1,21 +1,44 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <title>LinkedOut Debug</title>
-  <style>
-    body { font-family: monospace; background: #0a0a14; color: #e0e0e0; padding: 20px; }
-    button { padding: 8px 16px; margin: 4px; background: #1a1a2e; color: #e0e0e0; border: 1px solid #334; border-radius: 4px; cursor: pointer; }
-    button:hover { background: #e94560; }
-    #output { margin-top: 16px; white-space: pre-wrap; background: #12121e; padding: 16px; border-radius: 8px; max-height: 600px; overflow-y: auto; }
-  </style>
-</head>
-<body>
-  <h2>LinkedOut Debug</h2>
-  <button id="inspect-btn">Inspect LinkedIn DOM</button>
-  <button id="settings-btn">Show Settings</button>
-  <button id="apikey-btn">Check API Key</button>
-  <div id="output">Click a button to start...</div>
-  <script src="debug.js"></script>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <title>LinkedOut Debug</title>
+    <style>
+      body {
+        font-family: monospace;
+        background: #0a0a14;
+        color: #e0e0e0;
+        padding: 20px;
+      }
+      button {
+        padding: 8px 16px;
+        margin: 4px;
+        background: #1a1a2e;
+        color: #e0e0e0;
+        border: 1px solid #334;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #e94560;
+      }
+      #output {
+        margin-top: 16px;
+        white-space: pre-wrap;
+        background: #12121e;
+        padding: 16px;
+        border-radius: 8px;
+        max-height: 600px;
+        overflow-y: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>LinkedOut Debug</h2>
+    <button id="inspect-btn">Inspect LinkedIn DOM</button>
+    <button id="settings-btn">Show Settings</button>
+    <button id="apikey-btn">Check API Key</button>
+    <div id="output">Click a button to start...</div>
+    <script src="debug.js"></script>
+  </body>
 </html>
