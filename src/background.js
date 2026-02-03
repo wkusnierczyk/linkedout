@@ -43,6 +43,15 @@ async function getApiKey() {
   return apiKey || null;
 }
 
+// Sanitize text to remove orphaned Unicode surrogates that break JSON.stringify
+function sanitizeText(text) {
+  if (!text) return '';
+  // Remove orphaned high surrogates (not followed by low surrogate)
+  // and orphaned low surrogates (not preceded by high surrogate)
+  return text.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, '\uFFFD')
+             .replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '\uFFFD');
+}
+
 // ─── AI Classification ───────────────────────────────────────────────
 
 function buildClassificationPrompt(posts, settings, preferenceProfile, recentFeedback) {
@@ -62,7 +71,7 @@ function buildClassificationPrompt(posts, settings, preferenceProfile, recentFee
 
   const feedbackSection = recentFeedback.length > 0
     ? `\n## Recent Feedback Examples\nHere are recent posts the user gave feedback on:\n${recentFeedback.map(f =>
-        `- [${f.feedback === 'approved' ? 'CORRECTLY FILTERED' : 'WRONGLY FILTERED'}] Category: ${f.category || 'none'} | "${f.contentPreview}"`
+        `- [${f.feedback === 'approved' ? 'CORRECTLY FILTERED' : 'WRONGLY FILTERED'}] Category: ${f.category || 'none'} | "${sanitizeText(f.contentPreview)}"`
       ).join('\n')}`
     : '';
 
@@ -71,7 +80,7 @@ function buildClassificationPrompt(posts, settings, preferenceProfile, recentFee
     : '';
 
   const postsBlock = posts.map((p, i) => (
-    `### Post ${i} (id: ${p.id})\nAuthor: ${p.author}\n---\n${p.content}\n---`
+    `### Post ${i} (id: ${p.id})\nAuthor: ${sanitizeText(p.author)}\n---\n${sanitizeText(p.content)}\n---`
   )).join('\n\n');
 
   return `You are a LinkedIn post classifier. Analyze each post and determine whether it should be filtered from the user's feed.
@@ -261,11 +270,11 @@ async function regeneratePreferenceProfile() {
   if (feedbackHistory.length + interactionHistory.length < 5) return; // not enough data
 
   const feedbackSummary = feedbackHistory.slice(-100).map(f =>
-    `[${f.feedback}] category=${f.category || 'none'} | "${(f.content || '').slice(0, 150)}"`
+    `[${f.feedback}] category=${f.category || 'none'} | "${sanitizeText((f.content || '').slice(0, 150))}"`
   ).join('\n');
 
   const interactionSummary = interactionHistory.slice(-100).map(i =>
-    `[${i.interaction}] "${(i.content || '').slice(0, 150)}"`
+    `[${i.interaction}] "${sanitizeText((i.content || '').slice(0, 150))}"`
   ).join('\n');
 
   const prompt = `Analyze this LinkedIn user's feedback and interaction history to create a concise preference profile for post filtering.
