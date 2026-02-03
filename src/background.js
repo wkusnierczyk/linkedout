@@ -214,10 +214,29 @@ async function classifyPosts(posts) {
       .trim();
     const results = JSON.parse(clean);
 
-    // Store classification results
-    await storeClassifications(posts, results);
+    // Build set of enabled category IDs
+    const enabledCategoryIds = new Set(
+      Object.entries(settings.categories)
+        .filter(([, v]) => v.enabled)
+        .map(([id]) => id)
+    );
+    // Also include custom categories
+    for (const custom of settings.customCategories || []) {
+      if (custom.enabled) enabledCategoryIds.add(custom.id);
+    }
 
-    return { results };
+    // Filter out results for disabled categories
+    const filteredResults = results.map((r) => {
+      if (r.filter && r.category && !enabledCategoryIds.has(r.category)) {
+        return { ...r, filter: false, reason: 'Category disabled by user' };
+      }
+      return r;
+    });
+
+    // Store classification results
+    await storeClassifications(posts, filteredResults);
+
+    return { results: filteredResults };
   } catch (err) {
     console.error('Classification failed:', err);
     return { error: `Classification failed: ${err.message}` };
