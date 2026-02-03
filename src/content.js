@@ -256,7 +256,7 @@
       badge.className = 'lpf-badge';
       badge.innerHTML = `
         <span class="lpf-badge__icon">⊘</span>
-        <span class="lpf-badge__label">${escHtml(formatCategoryLabel(classification.category) || 'Filtered')}</span>
+        <span class="lpf-badge__label">${escHtml(classification.categoryLabel || 'Filtered')}</span>
         <span class="lpf-badge__reason">${escHtml(classification.reason || '')}</span>
         <div class="lpf-badge__buttons">
           <button class="lpf-badge__btn lpf-badge__btn--preview" title="Preview this post">👁</button>
@@ -534,7 +534,7 @@
         <div class="lpf-review-card" data-post-id="${escAttr(id)}">
           <div class="lpf-review-card__header">
             <span class="lpf-review-card__author">${escHtml(author)}</span>
-            <span class="lpf-review-card__category">${escHtml(formatCategoryLabel(classification.category) || 'Unknown')}</span>
+            <span class="lpf-review-card__category">${escHtml(classification.categoryLabel || 'Unknown')}</span>
           </div>
           <div class="lpf-review-card__preview lpf-review-card__preview--collapsed">${fullContent}</div>
           <button class="lpf-review-card__expand">Show more</button>
@@ -674,17 +674,6 @@
           '>': '&gt;',
         })[character]
     );
-  }
-
-  function formatCategoryLabel(id) {
-    if (!id) return '';
-    return id
-      .replace(/_/g, ' ')
-      .replace(/([a-z])([A-Z])/g, '$1 $2')
-      .toLowerCase()
-      .replace(/\s+/g, ' ')
-      .trim()
-      .replace(/^\w/, (c) => c.toUpperCase());
   }
 
   // ─── Initialization ─────────────────────────────────────────────

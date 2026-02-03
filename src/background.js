@@ -214,18 +214,16 @@ async function classifyPosts(posts) {
       .trim();
     const results = JSON.parse(clean);
 
-    // Build sets of category IDs (lowercase for case-insensitive matching)
-    const allKnownCategoryIds = new Set(
-      Object.keys(settings.categories).map((id) => id.toLowerCase())
-    );
-    const enabledCategoryIds = new Set(
-      Object.entries(settings.categories)
-        .filter(([, v]) => v.enabled)
-        .map(([id]) => id.toLowerCase())
-    );
-    // Also include custom categories
+    // Build lookup maps (lowercase ID → label) and enabled set
+    const categoryLabels = {};
+    const enabledCategoryIds = new Set();
+
+    for (const [id, cat] of Object.entries(settings.categories)) {
+      categoryLabels[id.toLowerCase()] = cat.label;
+      if (cat.enabled) enabledCategoryIds.add(id.toLowerCase());
+    }
     for (const custom of settings.customCategories || []) {
-      allKnownCategoryIds.add(custom.id.toLowerCase());
+      categoryLabels[custom.id.toLowerCase()] = custom.label;
       if (custom.enabled) enabledCategoryIds.add(custom.id.toLowerCase());
     }
 
@@ -237,10 +235,10 @@ async function classifyPosts(posts) {
       if (!r.filter || !r.category) return r;
 
       const categoryLower = r.category.toLowerCase();
-      const isKnownCategory = allKnownCategoryIds.has(categoryLower);
+      const label = categoryLabels[categoryLower];
       const isEnabled = enabledCategoryIds.has(categoryLower);
 
-      if (!isKnownCategory) {
+      if (!label) {
         console.log(`[LPF] Filtering out post ${r.id}: category "${r.category}" is unknown`);
         return { ...r, filter: false, reason: 'Unknown category' };
       }
@@ -248,7 +246,7 @@ async function classifyPosts(posts) {
         console.log(`[LPF] Filtering out post ${r.id}: category "${r.category}" is disabled`);
         return { ...r, filter: false, reason: 'Category disabled by user' };
       }
-      return r;
+      return { ...r, categoryLabel: label };
     });
 
     const filteredCount = filteredResults.filter((r) => r.filter).length;
