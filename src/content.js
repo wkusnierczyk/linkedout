@@ -503,13 +503,13 @@
       : '';
 
     statsElement.innerHTML = `
-      ${scanningIndicator}
       <div class="lpf-stat">
         <strong>${Object.keys(state.classifications).length}</strong> scanned
       </div>
       <div class="lpf-stat">
         <strong>${filtered.length}</strong> filtered
       </div>
+      ${scanningIndicator}
     `;
 
     if (filtered.length === 0) {
