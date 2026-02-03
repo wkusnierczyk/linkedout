@@ -40,13 +40,18 @@ document.getElementById('inspect-btn').addEventListener('click', async () => {
         for (const child of el.children) {
           if (child.children.length >= 3) {
             // Check if children look similar (same tag)
-            const tags = Array.from(child.children).map(c => c.tagName);
-            const mostCommon = tags.sort((a, b) =>
-              tags.filter(t => t === b).length - tags.filter(t => t === a).length
+            const tags = Array.from(child.children).map((c) => c.tagName);
+            const mostCommon = tags.sort(
+              (a, b) => tags.filter((t) => t === b).length - tags.filter((t) => t === a).length
             )[0];
-            const sameTagCount = tags.filter(t => t === mostCommon).length;
+            const sameTagCount = tags.filter((t) => t === mostCommon).length;
             if (sameTagCount >= 3 && sameTagCount / tags.length > 0.5) {
-              return { element: child, depth, childCount: child.children.length, childTag: mostCommon };
+              return {
+                element: child,
+                depth,
+                childCount: child.children.length,
+                childTag: mostCommon,
+              };
             }
           }
           const deeper = findRepeatingContainer(child, depth + 1);
@@ -68,7 +73,7 @@ document.getElementById('inspect-btn').addEventListener('click', async () => {
 
       // Sample the first few feed items
       const items = Array.from(container.element.children).slice(0, 5);
-      report.items = items.map((item, i) => {
+      report.items = items.map((item, _i) => {
         const info = {
           tag: item.tagName,
           className: (item.className || '').toString().slice(0, 200),
@@ -113,17 +118,19 @@ document.getElementById('inspect-btn').addEventListener('click', async () => {
         // Look for like/comment/repost buttons
         const allButtons = item.querySelectorAll('button');
         info.buttonLabels = Array.from(allButtons)
-          .map(b => b.getAttribute('aria-label') || b.textContent.trim())
-          .filter(t => t.length > 0 && t.length < 60)
+          .map((b) => b.getAttribute('aria-label') || b.textContent.trim())
+          .filter((t) => t.length > 0 && t.length < 60)
           .slice(0, 10);
 
         return info;
       });
 
       // Drill into the center column (the one with reaction buttons)
-      const feedColumn = items.find(item => {
+      const feedColumn = items.find((item) => {
         const btns = item.querySelectorAll('button');
-        return Array.from(btns).some(b => (b.getAttribute('aria-label') || '').includes('Reaction'));
+        return Array.from(btns).some((b) =>
+          (b.getAttribute('aria-label') || '').includes('Reaction')
+        );
       });
 
       if (feedColumn) {
@@ -150,11 +157,11 @@ document.getElementById('inspect-btn').addEventListener('click', async () => {
           };
 
           const feedChildren = Array.from(feedList.element.children).slice(0, 8);
-          report.feedChildren = feedChildren.map(el => {
+          report.feedChildren = feedChildren.map((el) => {
             const btns = el.querySelectorAll('button');
             const btnLabels = Array.from(btns)
-              .map(b => b.getAttribute('aria-label') || '')
-              .filter(t => t.length > 0)
+              .map((b) => b.getAttribute('aria-label') || '')
+              .filter((t) => t.length > 0)
               .slice(0, 6);
 
             let author = null;
@@ -181,7 +188,10 @@ document.getElementById('inspect-btn').addEventListener('click', async () => {
               tag: el.tagName,
               className: (el.className || '').toString().slice(0, 80),
               childCount: el.children.length,
-              children: Array.from(el.children).slice(0, 6).map(c => dumpTree(c, d + 1)).filter(Boolean),
+              children: Array.from(el.children)
+                .slice(0, 6)
+                .map((c) => dumpTree(c, d + 1))
+                .filter(Boolean),
             };
           }
           report.feedColumnTree = dumpTree(feedColumn, 0);
@@ -189,9 +199,11 @@ document.getElementById('inspect-btn').addEventListener('click', async () => {
       }
 
       // (legacy) Drill into the item that looks like the feed (has reaction buttons)
-      const feedItem = items.find(item => {
+      const feedItem = items.find((item) => {
         const buttons = item.querySelectorAll('button');
-        return Array.from(buttons).some(b => (b.getAttribute('aria-label') || '').includes('Reaction'));
+        return Array.from(buttons).some((b) =>
+          (b.getAttribute('aria-label') || '').includes('Reaction')
+        );
       });
 
       if (feedItem) {
@@ -200,11 +212,15 @@ document.getElementById('inspect-btn').addEventListener('click', async () => {
         const postCandidates = [];
         for (const el of allDescendants) {
           const btns = el.querySelectorAll(':scope > * button, :scope > * > * button');
-          const hasReaction = Array.from(btns).some(b => (b.getAttribute('aria-label') || '').includes('Reaction'));
-          const hasComment = Array.from(btns).some(b => (b.getAttribute('aria-label') || '').includes('Comment'));
+          const hasReaction = Array.from(btns).some((b) =>
+            (b.getAttribute('aria-label') || '').includes('Reaction')
+          );
+          const hasComment = Array.from(btns).some((b) =>
+            (b.getAttribute('aria-label') || '').includes('Comment')
+          );
           if (hasReaction && hasComment) {
             // Check this isn't a parent of another candidate
-            const isParentOfExisting = postCandidates.some(c => el.contains(c.el) && el !== c.el);
+            const isParentOfExisting = postCandidates.some((c) => el.contains(c.el) && el !== c.el);
             if (!isParentOfExisting) {
               postCandidates.push({ el, depth: 0 });
             }
@@ -212,8 +228,8 @@ document.getElementById('inspect-btn').addEventListener('click', async () => {
         }
 
         // Filter to only the innermost matching elements
-        const posts = postCandidates.filter(c =>
-          !postCandidates.some(other => c.el.contains(other.el) && c.el !== other.el)
+        const posts = postCandidates.filter(
+          (c) => !postCandidates.some((other) => c.el.contains(other.el) && c.el !== other.el)
         );
 
         report.postCount = posts.length;
@@ -225,20 +241,30 @@ document.getElementById('inspect-btn').addEventListener('click', async () => {
             const parent = cursor.parentElement;
             if (parent) {
               const idx = Array.from(parent.children).indexOf(cursor);
-              path.unshift({ tag: cursor.tagName, index: idx, className: (cursor.className || '').toString().slice(0, 80) });
+              path.unshift({
+                tag: cursor.tagName,
+                index: idx,
+                className: (cursor.className || '').toString().slice(0, 80),
+              });
             }
             cursor = parent;
           }
 
           // Get post text
           const spans = el.querySelectorAll('span[dir="ltr"], span.break-words');
-          const textFromSpans = Array.from(spans).map(s => s.textContent.trim()).filter(t => t.length > 20).slice(0, 2);
+          const textFromSpans = Array.from(spans)
+            .map((s) => s.textContent.trim())
+            .filter((t) => t.length > 20)
+            .slice(0, 2);
 
           // Get author
           let author = null;
           const links = el.querySelectorAll('a[href*="/in/"], a[href*="/company/"]');
           if (links.length > 0) {
-            author = { text: links[0].textContent.trim().slice(0, 60), href: links[0].getAttribute('href').slice(0, 100) };
+            author = {
+              text: links[0].textContent.trim().slice(0, 60),
+              href: links[0].getAttribute('href').slice(0, 100),
+            };
           }
 
           return {
@@ -248,8 +274,8 @@ document.getElementById('inspect-btn').addEventListener('click', async () => {
             author,
             textFromSpans,
             buttonLabels: Array.from(el.querySelectorAll('button'))
-              .map(b => b.getAttribute('aria-label') || '')
-              .filter(t => t.length > 0)
+              .map((b) => b.getAttribute('aria-label') || '')
+              .filter((t) => t.length > 0)
               .slice(0, 8),
           };
         });

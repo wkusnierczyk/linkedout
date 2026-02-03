@@ -10,9 +10,9 @@
 
   // ─── Configuration ───────────────────────────────────────────────
 
-  const BATCH_DELAY_MS = 3000;       // wait this long after last new post before classifying
-  const MIN_POST_LENGTH = 30;        // ignore very short posts
-  const POST_PREVIEW_LEN = 280;      // characters shown in review panel
+  const BATCH_DELAY_MS = 3000; // wait this long after last new post before classifying
+  const MIN_POST_LENGTH = 30; // ignore very short posts
+  const POST_PREVIEW_LEN = 280; // characters shown in review panel
 
   // ─── State ───────────────────────────────────────────────────────
 
@@ -20,7 +20,7 @@
     processedPosts: new Set(),
     pendingPosts: [],
     batchTimer: null,
-    classifications: {},  // postId → classification result
+    classifications: {}, // postId → classification result
     panelOpen: false,
     enabled: true,
   };
@@ -64,7 +64,7 @@
         if (child.children.length >= 4) {
           // Verify at least some children look like posts
           const childArray = Array.from(child.children);
-          const postLikeCount = childArray.filter(c => isPostElement(c)).length;
+          const postLikeCount = childArray.filter((c) => isPostElement(c)).length;
           if (postLikeCount >= 1) {
             return child;
           }
@@ -82,7 +82,7 @@
     const feedList = findFeedList();
     if (!feedList) return [];
 
-    return Array.from(feedList.children).filter(child => isPostElement(child));
+    return Array.from(feedList.children).filter((child) => isPostElement(child));
   }
 
   function getPostId(element) {
@@ -105,8 +105,8 @@
     if (ltrSpans.length > 0) {
       // Concatenate all ltr spans that have meaningful length
       const texts = Array.from(ltrSpans)
-        .map(span => span.textContent.trim())
-        .filter(text => text.length > 15);
+        .map((span) => span.textContent.trim())
+        .filter((text) => text.length > 15);
       if (texts.length > 0) return texts.join(' ');
     }
 
@@ -177,7 +177,7 @@
       if (state.pendingPosts.length === 0) return;
 
       const batch = state.pendingPosts.splice(0);
-      const payload = batch.map(postData => ({
+      const payload = batch.map((postData) => ({
         id: postData.id,
         content: postData.content.slice(0, 1500),
         author: postData.author,
@@ -244,12 +244,15 @@
         const author = getPostAuthor(element);
         chrome.runtime.sendMessage({
           type: 'recordFeedback',
-          postId, content: content.slice(0, 500), author,
+          postId,
+          content: content.slice(0, 500),
+          author,
           category: classification?.category,
           feedback: 'approved',
         });
         element.classList.remove('lpf-filtered--revealed');
-        badge.querySelector('.lpf-badge__buttons').innerHTML = '<span class="lpf-badge__confirmed">Confirmed</span>';
+        badge.querySelector('.lpf-badge__buttons').innerHTML =
+          '<span class="lpf-badge__confirmed">Confirmed</span>';
         showToast('Filter confirmed', 'info');
       });
 
@@ -259,16 +262,16 @@
         const author = getPostAuthor(element);
         chrome.runtime.sendMessage({
           type: 'recordFeedback',
-          postId, content: content.slice(0, 500), author,
+          postId,
+          content: content.slice(0, 500),
+          author,
           category: classification?.category,
           feedback: 'rejected',
         });
         removeFilterVisual(postId);
         state.classifications[postId] = { ...classification, filter: false };
         showToast('Post restored', 'info');
-        updateBadge(
-          String(Object.values(state.classifications).filter(c => c.filter).length)
-        );
+        updateBadge(String(Object.values(state.classifications).filter((c) => c.filter).length));
       });
 
       element.prepend(badge);
@@ -293,38 +296,58 @@
       const label = button.getAttribute('aria-label') || '';
 
       if (label.startsWith('Reaction button state:')) {
-        button.addEventListener('click', () => {
-          setTimeout(() => {
-            const currentLabel = button.getAttribute('aria-label') || '';
-            if (!currentLabel.includes('no reaction')) {
-              sendInteraction(postData, 'liked');
-            }
-          }, 500);
-        }, { capture: true });
+        button.addEventListener(
+          'click',
+          () => {
+            setTimeout(() => {
+              const currentLabel = button.getAttribute('aria-label') || '';
+              if (!currentLabel.includes('no reaction')) {
+                sendInteraction(postData, 'liked');
+              }
+            }, 500);
+          },
+          { capture: true }
+        );
       }
 
       if (label === 'Comment') {
-        button.addEventListener('click', () => {
-          setTimeout(() => observeCommentSubmission(postElement, postData), 500);
-        }, { capture: true });
+        button.addEventListener(
+          'click',
+          () => {
+            setTimeout(() => observeCommentSubmission(postElement, postData), 500);
+          },
+          { capture: true }
+        );
       }
 
       if (label === 'Repost') {
-        button.addEventListener('click', () => {
-          sendInteraction(postData, 'shared');
-        }, { capture: true });
+        button.addEventListener(
+          'click',
+          () => {
+            sendInteraction(postData, 'shared');
+          },
+          { capture: true }
+        );
       }
 
       if (label === 'View more options') {
-        button.addEventListener('click', () => {
-          setTimeout(() => observeMenuActions(postElement, postData), 300);
-        }, { capture: true });
+        button.addEventListener(
+          'click',
+          () => {
+            setTimeout(() => observeMenuActions(postElement, postData), 300);
+          },
+          { capture: true }
+        );
       }
 
       if (label === 'Hide Post') {
-        button.addEventListener('click', () => {
-          sendInteraction(postData, 'hidden');
-        }, { capture: true });
+        button.addEventListener(
+          'click',
+          () => {
+            sendInteraction(postData, 'hidden');
+          },
+          { capture: true }
+        );
       }
     }
   }
@@ -342,14 +365,22 @@
 
   function observeMenuActions(postElement, postData) {
     const checkMenu = () => {
-      const menuItems = document.querySelectorAll('[role="menu"] [role="menuitem"], [role="menuitem"]');
+      const menuItems = document.querySelectorAll(
+        '[role="menu"] [role="menuitem"], [role="menuitem"]'
+      );
       for (const item of menuItems) {
         const text = (item.textContent || '').toLowerCase();
-        if (text.includes("don't want to see") || text.includes('hide') || text.includes('not interested')) {
+        if (
+          text.includes("don't want to see") ||
+          text.includes('hide') ||
+          text.includes('not interested')
+        ) {
           item.addEventListener('click', () => sendInteraction(postData, 'hidden'), { once: true });
         }
         if (text.includes('unfollow')) {
-          item.addEventListener('click', () => sendInteraction(postData, 'unfollowed'), { once: true });
+          item.addEventListener('click', () => sendInteraction(postData, 'unfollowed'), {
+            once: true,
+          });
         }
       }
     };
@@ -404,7 +435,8 @@
   function createToggleButton() {
     const button = document.createElement('button');
     button.id = 'lpf-toggle';
-    button.innerHTML = '<span class="lpf-toggle__icon">⊘</span><span class="lpf-toggle__count" id="lpf-badge-count"></span>';
+    button.innerHTML =
+      '<span class="lpf-toggle__icon">⊘</span><span class="lpf-toggle__count" id="lpf-badge-count"></span>';
     button.title = 'Open LinkedIn Post Filter';
     button.addEventListener('click', togglePanel);
     document.body.appendChild(button);
@@ -443,16 +475,18 @@
     }
 
     emptyElement.style.display = 'none';
-    listElement.innerHTML = filtered.map(([id, classification]) => {
-      const postElement = document.querySelector(`[data-lpf-id="${id}"]`);
-      const content = postElement ? getPostText(postElement) : '(post no longer visible)';
-      const author = postElement ? getPostAuthor(postElement) : 'Unknown';
-      const preview = content.slice(0, POST_PREVIEW_LEN) + (content.length > POST_PREVIEW_LEN ? '…' : '');
-      const confidencePercent = Math.round((classification.confidence || 0) * 100);
+    listElement.innerHTML = filtered
+      .map(([id, classification]) => {
+        const postElement = document.querySelector(`[data-lpf-id="${id}"]`);
+        const content = postElement ? getPostText(postElement) : '(post no longer visible)';
+        const author = postElement ? getPostAuthor(postElement) : 'Unknown';
+        const _preview =
+          content.slice(0, POST_PREVIEW_LEN) + (content.length > POST_PREVIEW_LEN ? '…' : '');
+        const confidencePercent = Math.round((classification.confidence || 0) * 100);
 
-      const fullContent = escHtml(content.slice(0, 1500));
+        const fullContent = escHtml(content.slice(0, 1500));
 
-      return `
+        return `
         <div class="lpf-review-card" data-post-id="${escAttr(id)}">
           <div class="lpf-review-card__header">
             <span class="lpf-review-card__author">${escHtml(author)}</span>
@@ -477,13 +511,14 @@
           </div>
         </div>
       `;
-    }).join('');
+      })
+      .join('');
 
-    listElement.querySelectorAll('[data-action]').forEach(button => {
+    listElement.querySelectorAll('[data-action]').forEach((button) => {
       button.addEventListener('click', handleReviewAction);
     });
 
-    listElement.querySelectorAll('.lpf-review-card__expand').forEach(button => {
+    listElement.querySelectorAll('.lpf-review-card__expand').forEach((button) => {
       button.addEventListener('click', (event) => {
         event.stopPropagation();
         const card = button.closest('.lpf-review-card');
@@ -513,7 +548,9 @@
 
     chrome.runtime.sendMessage({
       type: 'recordFeedback',
-      postId, content: content.slice(0, 500), author,
+      postId,
+      content: content.slice(0, 500),
+      author,
       category: classification?.category,
       feedback,
     });
@@ -531,16 +568,16 @@
       card.classList.add('lpf-review-card--dismissed');
       setTimeout(() => {
         card.remove();
-        const remaining = document.querySelectorAll('#lpf-panel__list .lpf-review-card:not(.lpf-review-card--dismissed)');
+        const remaining = document.querySelectorAll(
+          '#lpf-panel__list .lpf-review-card:not(.lpf-review-card--dismissed)'
+        );
         if (remaining.length === 0) {
           document.getElementById('lpf-panel__empty').style.display = 'block';
         }
       }, 300);
     }
 
-    updateBadge(
-      String(Object.values(state.classifications).filter(c => c.filter).length)
-    );
+    updateBadge(String(Object.values(state.classifications).filter((c) => c.filter).length));
   }
 
   function updateBadge(text) {
@@ -582,9 +619,17 @@
   }
 
   function escAttr(string) {
-    return string.replace(/[&"'<>]/g, character => ({
-      '&': '&amp;', '"': '&quot;', "'": '&#39;', '<': '&lt;', '>': '&gt;'
-    })[character]);
+    return string.replace(
+      /[&"'<>]/g,
+      (character) =>
+        ({
+          '&': '&amp;',
+          '"': '&quot;',
+          "'": '&#39;',
+          '<': '&lt;',
+          '>': '&gt;',
+        })[character]
+    );
   }
 
   // ─── Initialization ─────────────────────────────────────────────
@@ -633,7 +678,7 @@
     if (message.type === 'toggleEnabled') {
       state.enabled = message.enabled;
       if (!state.enabled) {
-        document.querySelectorAll('.lpf-filtered').forEach(element => {
+        document.querySelectorAll('.lpf-filtered').forEach((element) => {
           element.classList.remove('lpf-filtered', 'lpf-filtered--revealed');
           const badge = element.querySelector('.lpf-badge');
           if (badge) badge.remove();
@@ -645,7 +690,7 @@
       state.processedPosts.clear();
       state.pendingPosts = [];
       state.classifications = {};
-      document.querySelectorAll('.lpf-filtered').forEach(element => {
+      document.querySelectorAll('.lpf-filtered').forEach((element) => {
         element.classList.remove('lpf-filtered', 'lpf-filtered--revealed');
         const badge = element.querySelector('.lpf-badge');
         if (badge) badge.remove();
