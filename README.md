@@ -1,8 +1,20 @@
-# LinkedOut
+<table>
+  <tr>
+    <td>
+      <img src="graphics/out-logo.png" alt="logo" width="200" />
+    </td>
+    <td>
+      <p><strong>LinkedOut</strong>: Adaptive LinkedIn Post Filter</p>
+      An AI-powered Chrome extension that filters your LinkedIn feed using Claude to classify posts, learns from your feedback, and adapts to your preferences over time.
+    </td>
+  </tr>
+</table>
 
-Adaptive LinkedIn Post Filter
+## Status
 
-An AI-powered Chrome extension that filters your LinkedIn feed using Claude to classify posts, learns from your feedback, and adapts to your preferences over time.
+[**WIP**] Work in progress.  
+LinkedOut is currently in a rpototyping phase.
+
 
 ## Features
 
