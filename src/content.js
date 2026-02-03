@@ -28,6 +28,7 @@
     initialized: false, // tracks if UI has been created
     lastUrl: location.href, // for SPA navigation detection
     contextValid: true, // tracks if extension context is still valid
+    scanning: false, // tracks if classification is in progress
   };
 
   // ─── Safe Messaging ─────────────────────────────────────────────
@@ -208,11 +209,15 @@
       }));
 
       updateBadge('…');
+      state.scanning = true;
+      if (state.panelOpen) renderPanelContent();
 
       const response = await sendMessage({
         type: 'classifyPosts',
         posts: payload,
       });
+
+      state.scanning = false;
 
       if (response?.error === 'context_invalidated') return;
 
@@ -220,6 +225,7 @@
         console.warn('[LPF] Classification error:', response.error);
         showToast(response.error, 'error');
         updateBadge('!');
+        if (state.panelOpen) renderPanelContent();
         return;
       }
 
@@ -250,7 +256,7 @@
       badge.className = 'lpf-badge';
       badge.innerHTML = `
         <span class="lpf-badge__icon">⊘</span>
-        <span class="lpf-badge__label">${escHtml(classification.category || 'filtered')}</span>
+        <span class="lpf-badge__label">${escHtml(formatCategoryLabel(classification.category) || 'Filtered')}</span>
         <span class="lpf-badge__reason">${escHtml(classification.reason || '')}</span>
         <div class="lpf-badge__buttons">
           <button class="lpf-badge__btn lpf-badge__btn--preview" title="Preview this post">👁</button>
@@ -492,7 +498,12 @@
     const listElement = document.getElementById('lpf-panel__list');
     const emptyElement = document.getElementById('lpf-panel__empty');
 
+    const scanningIndicator = state.scanning
+      ? '<div class="lpf-stat lpf-stat--scanning">Scanning...</div>'
+      : '';
+
     statsElement.innerHTML = `
+      ${scanningIndicator}
       <div class="lpf-stat">
         <strong>${Object.keys(state.classifications).length}</strong> scanned
       </div>
@@ -523,7 +534,7 @@
         <div class="lpf-review-card" data-post-id="${escAttr(id)}">
           <div class="lpf-review-card__header">
             <span class="lpf-review-card__author">${escHtml(author)}</span>
-            <span class="lpf-review-card__category">${escHtml(classification.category || 'unknown')}</span>
+            <span class="lpf-review-card__category">${escHtml(formatCategoryLabel(classification.category) || 'Unknown')}</span>
           </div>
           <div class="lpf-review-card__preview lpf-review-card__preview--collapsed">${fullContent}</div>
           <button class="lpf-review-card__expand">Show more</button>
@@ -663,6 +674,17 @@
           '>': '&gt;',
         })[character]
     );
+  }
+
+  function formatCategoryLabel(id) {
+    if (!id) return '';
+    return id
+      .replace(/_/g, ' ')
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
+      .toLowerCase()
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/^\w/, (c) => c.toUpperCase());
   }
 
   // ─── Initialization ─────────────────────────────────────────────

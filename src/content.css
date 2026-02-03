@@ -250,6 +250,22 @@
   margin-right: 4px;
 }
 
+.lpf-stat--scanning {
+  color: #4ecdc4;
+  font-weight: 600;
+  animation: lpf-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes lpf-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
 /* ─── Panel Post List ──────────────────────────────────────────── */
 
 #lpf-panel__list {

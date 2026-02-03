@@ -35,7 +35,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ─── Categories ───────────────────────────────────────────────
   const catsEl = document.getElementById('categories');
-  for (const [id, cat] of Object.entries(settings.categories || {})) {
+  const sortedBuiltIn = Object.entries(settings.categories || {}).sort((a, b) =>
+    (a[1].label || a[0]).localeCompare(b[1].label || b[0])
+  );
+  for (const [id, cat] of sortedBuiltIn) {
     const row = document.createElement('div');
     row.className = 'cat-row';
     row.innerHTML = `
@@ -59,7 +62,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function renderCustomCategories() {
     customEl.innerHTML = '';
-    for (const cat of settings.customCategories || []) {
+    const sortedCustom = (settings.customCategories || []).slice().sort((a, b) =>
+      (a.label || a.id).localeCompare(b.label || b.id)
+    );
+    for (const cat of sortedCustom) {
       const row = document.createElement('div');
       row.className = 'cat-row';
       row.innerHTML = `

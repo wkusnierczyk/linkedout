@@ -34,13 +34,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('stat-approved').textContent = stats.approved || 0;
   document.getElementById('stat-rejected').textContent = stats.rejected || 0;
 
-  // Categories
+  // Categories (sorted alphabetically by label)
   const allCats = { ...settings.categories };
   for (const custom of settings.customCategories || []) {
     allCats[custom.id] = custom;
   }
 
-  for (const [id, cat] of Object.entries(allCats)) {
+  const sortedCats = Object.entries(allCats).sort((a, b) =>
+    (a[1].label || a[0]).localeCompare(b[1].label || b[0])
+  );
+
+  for (const [id, cat] of sortedCats) {
     const row = document.createElement('div');
     row.className = 'cat-row';
     row.innerHTML = `
