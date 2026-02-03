@@ -299,6 +299,8 @@
         element.classList.remove('lpf-filtered--revealed');
         badge.querySelector('.lpf-badge__buttons').innerHTML =
           '<span class="lpf-badge__confirmed">Confirmed</span>';
+        state.classifications[postId] = { ...state.classifications[postId], confirmed: true };
+        if (state.panelOpen) renderPanelContent();
         showToast('Filter confirmed', 'info');
       });
 
@@ -505,7 +507,7 @@
 
   function renderPanelContent() {
     const filtered = Object.entries(state.classifications)
-      .filter(([, classification]) => classification.filter)
+      .filter(([, classification]) => classification.filter && !classification.confirmed)
       .sort((a, b) => (b[1].confidence || 0) - (a[1].confidence || 0));
 
     const statsElement = document.getElementById('lpf-panel__stats');
@@ -615,6 +617,15 @@
       state.classifications[postId] = { ...classification, filter: false };
       showToast('Post restored', 'info');
     } else {
+      state.classifications[postId] = { ...classification, confirmed: true };
+      // Update badge on the post
+      const postElement = document.querySelector(`[data-lpf-id="${postId}"]`);
+      if (postElement) {
+        const badgeButtons = postElement.querySelector('.lpf-badge__buttons');
+        if (badgeButtons) {
+          badgeButtons.innerHTML = '<span class="lpf-badge__confirmed">Confirmed</span>';
+        }
+      }
       showToast('Filter confirmed', 'info');
     }
 
