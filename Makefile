@@ -9,6 +9,12 @@ TEST_DIR ?= tests
 COVERAGE_DIR ?= coverage
 NODE_MODULES ?= node_modules
 
+# ─── Macros ───────────────────────────────────────────────────────
+# Print to stderr (diagnostic messages should not pollute stdout)
+define log
+	@>&2 echo $(1)
+endef
+
 # ─── Phony Targets ────────────────────────────────────────────────
 .PHONY: all install lint lint-fix format format-check test test-watch test-coverage check clean help
 
@@ -52,22 +58,22 @@ clean:
 
 # ─── Help ─────────────────────────────────────────────────────────
 help:
-	@echo "Available targets:"
-	@echo "  install        - Install dependencies"
-	@echo "  lint           - Run ESLint on $(SRC_DIR)/"
-	@echo "  lint-fix       - Run ESLint with auto-fix"
-	@echo "  format         - Format code with Prettier"
-	@echo "  format-check   - Check formatting without changes"
-	@echo "  test           - Run tests"
-	@echo "  test-watch     - Run tests in watch mode"
-	@echo "  test-coverage  - Run tests with coverage"
-	@echo "  check          - Run all checks (format, lint, test)"
-	@echo "  clean          - Remove $(NODE_MODULES)/ and $(COVERAGE_DIR)/"
-	@echo "  help           - Show this help"
-	@echo ""
-	@echo "Variables (override with VAR=value):"
-	@echo "  NPM            - Package manager (default: npm)"
-	@echo "  SRC_DIR        - Source directory (default: src)"
-	@echo "  TEST_DIR       - Test directory (default: tests)"
-	@echo "  COVERAGE_DIR   - Coverage output (default: coverage)"
-	@echo "  NODE_MODULES   - Dependencies dir (default: node_modules)"
+	$(call log,"Available targets:")
+	$(call log,"  install        - Install dependencies")
+	$(call log,"  lint           - Run ESLint on $(SRC_DIR)/")
+	$(call log,"  lint-fix       - Run ESLint with auto-fix")
+	$(call log,"  format         - Format code with Prettier")
+	$(call log,"  format-check   - Check formatting without changes")
+	$(call log,"  test           - Run tests")
+	$(call log,"  test-watch     - Run tests in watch mode")
+	$(call log,"  test-coverage  - Run tests with coverage")
+	$(call log,"  check          - Run all checks (format, lint, test)")
+	$(call log,"  clean          - Remove $(NODE_MODULES)/ and $(COVERAGE_DIR)/")
+	$(call log,"  help           - Show this help")
+	$(call log,"")
+	$(call log,"Variables (override with VAR=value):")
+	$(call log,"  NPM            - Package manager (default: npm)")
+	$(call log,"  SRC_DIR        - Source directory (default: src)")
+	$(call log,"  TEST_DIR       - Test directory (default: tests)")
+	$(call log,"  COVERAGE_DIR   - Coverage output (default: coverage)")
+	$(call log,"  NODE_MODULES   - Dependencies dir (default: node_modules)")
