@@ -214,24 +214,45 @@ async function classifyPosts(posts) {
       .trim();
     const results = JSON.parse(clean);
 
-    // Build set of enabled category IDs
+    // Build sets of category IDs (lowercase for case-insensitive matching)
+    const allKnownCategoryIds = new Set(
+      Object.keys(settings.categories).map((id) => id.toLowerCase())
+    );
     const enabledCategoryIds = new Set(
       Object.entries(settings.categories)
         .filter(([, v]) => v.enabled)
-        .map(([id]) => id)
+        .map(([id]) => id.toLowerCase())
     );
     // Also include custom categories
     for (const custom of settings.customCategories || []) {
-      if (custom.enabled) enabledCategoryIds.add(custom.id);
+      allKnownCategoryIds.add(custom.id.toLowerCase());
+      if (custom.enabled) enabledCategoryIds.add(custom.id.toLowerCase());
     }
 
-    // Filter out results for disabled categories
+    // Filter out results for disabled or unknown categories (case-insensitive)
+    console.log('[LPF] Enabled categories:', [...enabledCategoryIds]);
+    console.log('[LPF] Raw results from API:', JSON.stringify(results, null, 2));
+
     const filteredResults = results.map((r) => {
-      if (r.filter && r.category && !enabledCategoryIds.has(r.category)) {
+      if (!r.filter || !r.category) return r;
+
+      const categoryLower = r.category.toLowerCase();
+      const isKnownCategory = allKnownCategoryIds.has(categoryLower);
+      const isEnabled = enabledCategoryIds.has(categoryLower);
+
+      if (!isKnownCategory) {
+        console.log(`[LPF] Filtering out post ${r.id}: category "${r.category}" is unknown`);
+        return { ...r, filter: false, reason: 'Unknown category' };
+      }
+      if (!isEnabled) {
+        console.log(`[LPF] Filtering out post ${r.id}: category "${r.category}" is disabled`);
         return { ...r, filter: false, reason: 'Category disabled by user' };
       }
       return r;
     });
+
+    const filteredCount = filteredResults.filter((r) => r.filter).length;
+    console.log(`[LPF] Final result: ${filteredCount}/${filteredResults.length} posts to filter`);
 
     // Store classification results
     await storeClassifications(posts, filteredResults);
