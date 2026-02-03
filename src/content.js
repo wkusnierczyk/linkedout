@@ -316,22 +316,25 @@
           category: classification?.category,
           feedback: 'rejected',
         });
-        removeFilterVisual(postId);
-        state.classifications[postId] = { ...classification, filter: false };
+        element.classList.remove('lpf-filtered');
+        badge.querySelector('.lpf-badge__buttons').innerHTML =
+          '<span class="lpf-badge__rejected">Rejected</span>';
+        state.classifications[postId] = {
+          ...state.classifications[postId],
+          filter: false,
+          rejected: true,
+        };
+        if (state.panelOpen) renderPanelContent();
         showToast('Post restored', 'info');
-        updateBadge(String(Object.values(state.classifications).filter((c) => c.filter).length));
+        updateBadge(
+          String(
+            Object.values(state.classifications).filter((c) => c.filter && !c.confirmed).length
+          )
+        );
       });
 
       element.prepend(badge);
     }
-  }
-
-  function removeFilterVisual(postId) {
-    const element = document.querySelector(`[data-lpf-id="${postId}"]`);
-    if (!element) return;
-    element.classList.remove('lpf-filtered', 'lpf-filtered--revealed');
-    const badge = element.querySelector('.lpf-badge');
-    if (badge) badge.remove();
   }
 
   // ─── Interaction Observation ────────────────────────────────────
@@ -507,7 +510,10 @@
 
   function renderPanelContent() {
     const filtered = Object.entries(state.classifications)
-      .filter(([, classification]) => classification.filter && !classification.confirmed)
+      .filter(
+        ([, classification]) =>
+          classification.filter || classification.confirmed || classification.rejected
+      )
       .sort((a, b) => (b[1].confidence || 0) - (a[1].confidence || 0));
 
     const statsElement = document.getElementById('lpf-panel__stats');
@@ -540,11 +546,33 @@
         const content = classification.content || '(no content)';
         const author = classification.author || 'Unknown';
         const confidencePercent = Math.round((classification.confidence || 0) * 100);
-
         const fullContent = escHtml(content.slice(0, 1500));
 
+        let statusClass = '';
+        let actionsHtml = '';
+
+        if (classification.confirmed) {
+          statusClass = 'lpf-review-card--confirmed';
+          actionsHtml = `
+            <span class="lpf-review-card__status lpf-review-card__status--confirmed">Confirmed</span>
+            <button class="lpf-btn lpf-btn--scroll" data-action="scroll" data-post-id="${escAttr(id)}" title="Scroll to post">↓</button>
+          `;
+        } else if (classification.rejected) {
+          statusClass = 'lpf-review-card--rejected';
+          actionsHtml = `
+            <span class="lpf-review-card__status lpf-review-card__status--rejected">Rejected</span>
+            <button class="lpf-btn lpf-btn--scroll" data-action="scroll" data-post-id="${escAttr(id)}" title="Scroll to post">↓</button>
+          `;
+        } else {
+          actionsHtml = `
+            <button class="lpf-btn lpf-btn--approve" data-action="approve" data-post-id="${escAttr(id)}" title="Yes, filter this">✓ Filter</button>
+            <button class="lpf-btn lpf-btn--reject" data-action="reject" data-post-id="${escAttr(id)}" title="No, keep this">✗ Keep</button>
+            <button class="lpf-btn lpf-btn--scroll" data-action="scroll" data-post-id="${escAttr(id)}" title="Scroll to post">↓</button>
+          `;
+        }
+
         return `
-        <div class="lpf-review-card" data-post-id="${escAttr(id)}">
+        <div class="lpf-review-card ${statusClass}" data-post-id="${escAttr(id)}">
           <div class="lpf-review-card__header">
             <span class="lpf-review-card__author">${escHtml(author)}</span>
             <span class="lpf-review-card__category">${escHtml(classification.categoryLabel || 'Unknown')}</span>
@@ -555,17 +583,7 @@
             <em>${escHtml(classification.reason || '')}</em>
             <span class="lpf-review-card__confidence">${confidencePercent}%</span>
           </div>
-          <div class="lpf-review-card__actions">
-            <button class="lpf-btn lpf-btn--approve" data-action="approve" data-post-id="${escAttr(id)}" title="Yes, filter this">
-              ✓ Filter
-            </button>
-            <button class="lpf-btn lpf-btn--reject" data-action="reject" data-post-id="${escAttr(id)}" title="No, keep this">
-              ✗ Keep
-            </button>
-            <button class="lpf-btn lpf-btn--scroll" data-action="scroll" data-post-id="${escAttr(id)}" title="Scroll to post">
-              ↓
-            </button>
-          </div>
+          <div class="lpf-review-card__actions">${actionsHtml}</div>
         </div>
       `;
       })
@@ -612,38 +630,32 @@
       feedback,
     });
 
+    // Update badge on the post
+    const badgeElement = postElement?.querySelector('.lpf-badge__buttons');
+
     if (action === 'reject') {
-      removeFilterVisual(postId);
-      state.classifications[postId] = { ...classification, filter: false };
+      state.classifications[postId] = { ...classification, filter: false, rejected: true };
+      if (postElement) {
+        postElement.classList.remove('lpf-filtered');
+        if (badgeElement) {
+          badgeElement.innerHTML = '<span class="lpf-badge__rejected">Rejected</span>';
+        }
+      }
       showToast('Post restored', 'info');
     } else {
       state.classifications[postId] = { ...classification, confirmed: true };
-      // Update badge on the post
-      const postElement = document.querySelector(`[data-lpf-id="${postId}"]`);
-      if (postElement) {
-        const badgeButtons = postElement.querySelector('.lpf-badge__buttons');
-        if (badgeButtons) {
-          badgeButtons.innerHTML = '<span class="lpf-badge__confirmed">Confirmed</span>';
-        }
+      if (badgeElement) {
+        badgeElement.innerHTML = '<span class="lpf-badge__confirmed">Confirmed</span>';
       }
       showToast('Filter confirmed', 'info');
     }
 
-    const card = button.closest('.lpf-review-card');
-    if (card) {
-      card.classList.add('lpf-review-card--dismissed');
-      setTimeout(() => {
-        card.remove();
-        const remaining = document.querySelectorAll(
-          '#lpf-panel__list .lpf-review-card:not(.lpf-review-card--dismissed)'
-        );
-        if (remaining.length === 0) {
-          document.getElementById('lpf-panel__empty').style.display = 'block';
-        }
-      }, 300);
-    }
+    // Re-render panel to show status
+    renderPanelContent();
 
-    updateBadge(String(Object.values(state.classifications).filter((c) => c.filter).length));
+    updateBadge(
+      String(Object.values(state.classifications).filter((c) => c.filter && !c.confirmed).length)
+    );
   }
 
   function updateBadge(text) {
