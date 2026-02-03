@@ -62,9 +62,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function renderCustomCategories() {
     customEl.innerHTML = '';
-    const sortedCustom = (settings.customCategories || []).slice().sort((a, b) =>
-      (a.label || a.id).localeCompare(b.label || b.id)
-    );
+    const sortedCustom = (settings.customCategories || [])
+      .slice()
+      .sort((a, b) => (a.label || a.id).localeCompare(b.label || b.id));
     for (const cat of sortedCustom) {
       const row = document.createElement('div');
       row.className = 'cat-row';
