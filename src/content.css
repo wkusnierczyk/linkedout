@@ -319,6 +319,7 @@
   padding: 14px;
   margin-bottom: 10px;
   transition: all 0.3s ease;
+  cursor: pointer;
 }
 
 .lpf-review-card:hover {

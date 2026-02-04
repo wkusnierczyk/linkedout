@@ -595,7 +595,10 @@
       .join('');
 
     listElement.querySelectorAll('[data-action]').forEach((button) => {
-      button.addEventListener('click', handleReviewAction);
+      button.addEventListener('click', (event) => {
+        event.stopPropagation();
+        handleReviewAction(event);
+      });
     });
 
     listElement.querySelectorAll('.lpf-review-card__expand').forEach((button) => {
@@ -605,6 +608,18 @@
         const preview = card.querySelector('.lpf-review-card__preview');
         const collapsed = preview.classList.toggle('lpf-review-card__preview--collapsed');
         button.textContent = collapsed ? 'Show more' : 'Show less';
+      });
+    });
+
+    listElement.querySelectorAll('.lpf-review-card').forEach((card) => {
+      card.addEventListener('click', () => {
+        const postId = card.dataset.postId;
+        const element = findPostElement(postId);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+          showToast('Post no longer visible', 'info');
+        }
       });
     });
   }
@@ -653,6 +668,11 @@
         badgeElement.innerHTML = '<span class="lpf-badge__confirmed">Confirmed</span>';
       }
       showToast('Filter confirmed', 'info');
+    }
+
+    // Scroll to the post
+    if (postElement) {
+      postElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
     // Re-render panel to show status
