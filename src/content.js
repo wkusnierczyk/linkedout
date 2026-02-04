@@ -175,14 +175,21 @@
 
     for (const element of allPosts) {
       const id = getPostId(element);
+
+      // Always tag the DOM element (LinkedIn may have re-rendered it)
+      element.dataset.lpfId = id;
+
+      // Re-apply filter visual if we have a classification for this post
+      if (state.classifications[id]?.filter && !element.querySelector('.lpf-badge')) {
+        applyFilterVisual(id, state.classifications[id]);
+      }
+
       if (state.processedPosts.has(id)) continue;
       state.processedPosts.add(id);
 
       const data = extractPostData(element);
       if (data.content.length < MIN_POST_LENGTH) continue;
 
-      // Tag the DOM element
-      element.dataset.lpfId = id;
       newPosts.push(data);
 
       // Attach interaction observers to this post
