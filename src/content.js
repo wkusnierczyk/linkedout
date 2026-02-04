@@ -614,7 +614,6 @@
         button.textContent = collapsed ? 'Show more' : 'Show less';
       });
     });
-
   }
 
   function handleReviewAction(event) {
