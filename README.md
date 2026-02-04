@@ -1,7 +1,7 @@
 <table>
   <tr>
     <td>
-      <img src="graphics/out-logo.png" alt="logo" width="200" />
+      <img src="graphics/linkedout-tile-128-128.png" alt="logo" width="200" />
     </td>
     <td>
       <p><strong>LinkedOut</strong>: Adaptive LinkedIn Post Filter</p>
