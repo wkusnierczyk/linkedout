@@ -42,6 +42,36 @@
   border-bottom: 2px solid #e94560;
   border-radius: 8px 8px 0 0;
   opacity: 1;
+  transition: all 0.2s ease;
+}
+
+/* Confirmed filter: red-tinted badge */
+.lpf-badge--confirmed {
+  background: linear-gradient(135deg, #2d1020 0%, #1a0a15 100%);
+  border-bottom-color: #e94560;
+}
+
+.lpf-badge--confirmed .lpf-badge__icon {
+  color: #e94560;
+}
+
+.lpf-badge--confirmed .lpf-badge__label {
+  background: #e94560;
+}
+
+/* Rejected filter: green-tinted badge */
+.lpf-badge--rejected {
+  background: linear-gradient(135deg, #0d2d1a 0%, #0a1a10 100%);
+  border-bottom-color: #2ed573;
+}
+
+.lpf-badge--rejected .lpf-badge__icon {
+  color: #2ed573;
+}
+
+.lpf-badge--rejected .lpf-badge__label {
+  background: #2ed573;
+  color: #0a1a10;
 }
 
 .lpf-badge__icon {
