@@ -576,6 +576,11 @@ The project uses a Makefile for common development tasks. Variables can be overr
 | `make test-coverage` | Run tests with coverage report |
 | `make check` | Run all checks (format, lint, test) |
 | `make clean` | Remove `node_modules/` and `coverage/` |
+| `make version` | Print current version |
+| `make version V=x.y.z` | Set version in package.json and manifest.json |
+| `make bump-major` | Bump major version (x.0.0) |
+| `make bump-minor` | Bump minor version (x.y.0) |
+| `make bump-patch` | Bump patch version (x.y.z) |
 | `make help` | Show all available targets |
 
 ### LinkedIn DOM Resilience
