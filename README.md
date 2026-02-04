@@ -587,14 +587,31 @@ LinkedIn frequently changes their DOM structure. The extension uses structural d
 - **Text extraction**: Uses `span[dir="ltr"]` elements, with fallback to longest text node
 - **Author extraction**: Finds the first link pointing to `/in/` or `/company/`
 
-If classification stops working after a LinkedIn update:
+### Self-Healing Detection
+
+The extension includes self-healing capabilities to adapt when LinkedIn changes their DOM structure:
+
+**How it works:**
+
+1. **Detection tracking**: Each attempt to find posts is recorded as success/failure
+2. **Health monitoring**: After 3+ consecutive failures, detection is marked unhealthy
+3. **Pattern discovery**: When unhealthy, the extension scans for alternative patterns
+4. **Automatic healing**: If a new pattern is found and works, it's persisted to storage
+5. **User notification**: Toast messages inform you of layout changes and healing status
+
+**What gets healed:**
+
+| Selector | Detection Method |
+|----------|-----------------|
+| Reaction button label | Looks for buttons with `aria-label` containing "React", "Like", or "reaction" |
+
+**Privacy note**: Self-healing analyzes DOM *structure* only (tag names, attributes), never user content. No personal information is captured or transmitted.
+
+**Manual fallback**: If self-healing fails repeatedly:
 
 1. Check the browser console for `[LPF]` log messages
 2. Inspect the feed DOM in DevTools to identify what changed
-3. Update the detection functions in `content.js` (`findFeedList`, `isPostElement`, `getPostText`, `getPostAuthor`)
-4. Reload the extension
-
-See [#4](../../issues/4) for planned self-healing capability.
+3. Report the issue at [GitHub Issues](../../issues)
 
 ### Adding New Features
 
@@ -608,7 +625,7 @@ See [#4](../../issues/4) for planned self-healing capability.
 |------------|-------------|
 | **Virtual scrolling** | LinkedIn destroys and recreates DOM elements as you scroll. If you scroll away from a filtered post and back, the badge may be gone. The classification is preserved but the visual state is lost until rescan. See [#27](../../issues/27). |
 | **Brief flash before filtering** | Posts appear momentarily before classification completes. There's no way to intercept posts before they render. |
-| **DOM structure changes** | LinkedIn frequently updates their DOM. When this breaks detection, manual updates to `content.js` are needed until self-healing is implemented ([#4](../../issues/4)). |
+| **DOM structure changes** | LinkedIn frequently updates their DOM. The extension attempts to self-heal by finding alternative patterns, but some changes may require manual updates. |
 | **Storage limits** | Chrome extension storage is limited to ~5MB. Feedback history is automatically trimmed to stay within bounds. |
 | **Model-dependent quality** | Classification accuracy depends on the Claude model and prompt. Haiku is faster/cheaper but less accurate than Sonnet. |
 | **Extension reload requires page refresh** | If the extension is reloaded or updated, existing LinkedIn tabs need to be refreshed to reconnect. |
@@ -619,7 +636,6 @@ See [#4](../../issues/4) for planned self-healing capability.
 
 | Priority | Issue | Feature |
 |----------|-------|---------|
-| High | [#4](../../issues/4) | Self-diagnosing and self-healing DOM parsing |
 | High | [#19](../../issues/19) | Cache classifications locally to avoid redundant API calls |
 | Medium | [#5](../../issues/5) | Inline re-categorization with category selector |
 | Medium | [#7](../../issues/7) | Reversible feedback with color-coded banners |
@@ -629,8 +645,6 @@ See [#4](../../issues/4) for planned self-healing capability.
 | Medium | [#26](../../issues/26) | Unified iconography for filter actions |
 | Medium | [#27](../../issues/27) | Re-apply badges on scroll (virtual scroll resilience) |
 | Low | [#3](../../issues/3) | Mobile version |
-| Low | [#11](../../issues/11) | Local pattern matching fallback (no LLM required) |
-| Low | [#12](../../issues/12) | Legal considerations documentation |
 
 ### Open Bugs
 
@@ -642,6 +656,10 @@ See [#4](../../issues/4) for planned self-healing capability.
 
 | Issue | Feature |
 |-------|---------|
+| [#4](../../issues/4) | Self-diagnosing and self-healing DOM parsing |
+| [#11](../../issues/11) | Local pattern matching (privacy-first, no LLM required) |
+| [#12](../../issues/12) | Legal considerations documentation |
+| [#28](../../issues/28) | Fold all posts mode for easier navigation |
 | [#9](../../issues/9) | Category labels display properly (sentence case) |
 | [#13](../../issues/13) | Extension activation reliability on SPA navigation |
 | [#15](../../issues/15) | "Scanning..." status indicator in review panel |
