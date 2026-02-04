@@ -16,7 +16,7 @@ define log
 endef
 
 # ─── Phony Targets ────────────────────────────────────────────────
-.PHONY: all install install-dependencies lint lint-fix format format-check test test-watch test-coverage check clean help
+.PHONY: all install install-dependencies lint lint-fix format format-check test test-watch test-coverage check clean help version set-version bump-major bump-minor bump-patch
 
 # ─── Default Target ───────────────────────────────────────────────
 all: check
@@ -58,6 +58,43 @@ check: format-check lint test
 clean:
 	rm -rf $(NODE_MODULES) $(COVERAGE_DIR)
 
+# ─── Versioning ──────────────────────────────────────────────────
+# Get current version from package.json
+CURRENT_VERSION := $(shell node -p "require('./package.json').version")
+
+# Print current version (or set if V is provided)
+version:
+ifdef V
+	@$(MAKE) set-version
+else
+	@echo $(CURRENT_VERSION)
+endif
+
+# Set version in all files
+set-version:
+ifndef V
+	$(error Usage: make set-version V=x.y.z)
+endif
+	@if ! echo "$(V)" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$$'; then \
+		echo "Error: Invalid semver format. Use x.y.z or x.y.z-prerelease" >&2; \
+		exit 1; \
+	fi
+	@sed -i.bak 's/"version": "$(CURRENT_VERSION)"/"version": "$(V)"/' package.json manifest.json
+	@rm -f package.json.bak manifest.json.bak
+	$(call log,"Version updated: $(CURRENT_VERSION) -> $(V)")
+
+# Bump major version (x.0.0)
+bump-major:
+	@$(MAKE) set-version V=$(shell echo $(CURRENT_VERSION) | awk -F. '{print $$1+1".0.0"}')
+
+# Bump minor version (x.y.0)
+bump-minor:
+	@$(MAKE) set-version V=$(shell echo $(CURRENT_VERSION) | awk -F. '{print $$1"."$$2+1".0"}')
+
+# Bump patch version (x.y.z)
+bump-patch:
+	@$(MAKE) set-version V=$(shell echo $(CURRENT_VERSION) | awk -F. '{print $$1"."$$2"."$$3+1}')
+
 # ─── Help ─────────────────────────────────────────────────────────
 help:
 	$(call log,"Available targets:")
@@ -72,6 +109,11 @@ help:
 	$(call log,"  test-coverage  - Run tests with coverage")
 	$(call log,"  check          - Run all checks (format, lint, test)")
 	$(call log,"  clean          - Remove $(NODE_MODULES)/ and $(COVERAGE_DIR)/")
+	$(call log,"  version        - Print current version (or set with V=x.y.z)")
+	$(call log,"  set-version    - Set version: make set-version V=x.y.z")
+	$(call log,"  bump-major     - Bump major version (x.0.0)")
+	$(call log,"  bump-minor     - Bump minor version (x.y.0)")
+	$(call log,"  bump-patch     - Bump patch version (x.y.z)")
 	$(call log,"  help           - Show this help")
 	$(call log,"")
 	$(call log,"Variables (override with VAR=value):")

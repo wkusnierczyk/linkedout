@@ -12,8 +12,8 @@
 
 ## Status
 
-[**WIP**] Work in progress.
-LinkedOut is currently in a prototyping phase.
+[**Beta**] Ready for beta testing.
+Core features complete. Local pattern matching works without any external dependencies.
 
 ## Table of Contents
 
@@ -34,19 +34,15 @@ LinkedOut is currently in a prototyping phase.
 
 | Feature | Description |
 | --- | --- |
-| AI Classification | Posts are analyzed by Claude and categorized (AI-generated, thought leadership, engagement bait, politics, etc.) |
+| Local Classification | Privacy-first filtering using regex patterns — no data leaves your browser |
+| LLM Classification | Optional AI-powered filtering using Claude for more nuanced detection |
 | Review Panel | See all filtered posts in a slide-out panel, approve or reject each decision |
+| Fold Mode | Collapse all posts to quickly navigate to filtered content |
+| Reversible Feedback | Color-coded badges (orange/red/green) with undo support |
 | Interaction Tracking | Automatically observes your likes, comments, hides, and unfollows as implicit preference signals |
-| Adaptive Learning | Builds a preference profile from your explicit feedback and observed behavior, improving over time |
+| Adaptive Learning | Learns from your feedback — author reputation, keywords, pattern accuracy |
+| Self-Healing | Automatically adapts when LinkedIn changes their DOM structure |
 | Customizable | Add your own filter categories, keyword triggers, and adjust sensitivity |
-
-## Planned Features
-
-| Feature | Issue | Description |
-|---------|-------|-------------|
-| Self-healing DOM | [#4](../../issues/4) | Automatically detect and fix broken selectors when LinkedIn changes their DOM structure |
-| Inline re-categorization | [#5](../../issues/5) | Click the category label to correct misclassifications on the fly |
-| Reversible feedback | [#7](../../issues/7) | Color-coded banners (red/green) with undo support for filter decisions |
 
 ## Known Issues
 
@@ -55,9 +51,9 @@ See [Known Limitations](#known-limitations) and [Roadmap](#roadmap) for the full
 ## Quick Start
 
 1. **Install**: Load the extension in Chrome Developer mode (see [Installing the Prototype](#installing-the-prototype))
-2. **Configure**: Click ⊘ → Settings → enter your [Anthropic API key](https://console.anthropic.com/settings/keys)
-3. **Browse**: Go to [LinkedIn](https://www.linkedin.com/feed) — posts are scanned automatically
-4. **Review**: Click the floating ⊘ button to see filtered posts and provide feedback
+2. **Browse**: Go to [LinkedIn](https://www.linkedin.com/feed) — posts are scanned automatically using local pattern matching
+3. **Review**: Click the floating ⊘ button to see filtered posts and provide feedback
+4. **Optional**: For more accurate classification, enable LLM mode in Settings and add your [Anthropic API key](https://console.anthropic.com/settings/keys)
 
 ## Classification Modes
 
@@ -309,12 +305,15 @@ While learned data isn't directly editable, you can guide filtering through Sett
 ### File Structure
 
 ```
-linkedin-post-filter/
+linkedout/
 ├── manifest.json              # Extension manifest (MV3)
 ├── src/
 │   ├── background.js          # Service worker: API calls, storage, learning
 │   ├── content.js             # Content script: DOM interaction, UI injection
 │   ├── content.css            # Injected styles for filter overlay & panel
+│   ├── patterns.js            # Local pattern matching for classification
+│   ├── learning.js            # Feedback learning (author reputation, keywords)
+│   ├── dom-healing.js         # Self-healing DOM detection
 │   ├── popup/
 │   │   ├── popup.html         # Toolbar popup: quick controls & stats
 │   │   ├── popup.js
@@ -323,6 +322,7 @@ linkedin-post-filter/
 │       ├── options.html       # Full settings page
 │       ├── options.js
 │       └── options.css
+├── tests/                     # Unit tests (Vitest)
 └── README.md
 ```
 
@@ -576,6 +576,11 @@ The project uses a Makefile for common development tasks. Variables can be overr
 | `make test-coverage` | Run tests with coverage report |
 | `make check` | Run all checks (format, lint, test) |
 | `make clean` | Remove `node_modules/` and `coverage/` |
+| `make version` | Print current version |
+| `make version V=x.y.z` | Set version in package.json and manifest.json |
+| `make bump-major` | Bump major version (x.0.0) |
+| `make bump-minor` | Bump minor version (x.y.0) |
+| `make bump-patch` | Bump patch version (x.y.z) |
 | `make help` | Show all available targets |
 
 ### LinkedIn DOM Resilience
@@ -636,14 +641,11 @@ The extension includes self-healing capabilities to adapt when LinkedIn changes 
 
 | Priority | Issue | Feature |
 |----------|-------|---------|
-| High | [#19](../../issues/19) | Cache classifications locally to avoid redundant API calls |
 | Medium | [#5](../../issues/5) | Inline re-categorization with category selector |
-| Medium | [#7](../../issues/7) | Reversible feedback with color-coded banners |
 | Medium | [#10](../../issues/10) | Support multiple categories per post |
 | Medium | [#20](../../issues/20) | Support novel categories proposed by Claude |
 | Medium | [#25](../../issues/25) | Statistics page with time-binned analytics |
-| Medium | [#26](../../issues/26) | Unified iconography for filter actions |
-| Medium | [#27](../../issues/27) | Re-apply badges on scroll (virtual scroll resilience) |
+| Medium | [#38](../../issues/38) | Draggable floating button |
 | Low | [#3](../../issues/3) | Mobile version |
 
 ### Open Bugs
@@ -657,8 +659,12 @@ The extension includes self-healing capabilities to adapt when LinkedIn changes 
 | Issue | Feature |
 |-------|---------|
 | [#4](../../issues/4) | Self-diagnosing and self-healing DOM parsing |
+| [#7](../../issues/7) | Reversible feedback with color-coded banners |
 | [#11](../../issues/11) | Local pattern matching (privacy-first, no LLM required) |
 | [#12](../../issues/12) | Legal considerations documentation |
+| [#19](../../issues/19) | Cache classifications locally |
+| [#26](../../issues/26) | Unified iconography for filter actions |
+| [#27](../../issues/27) | Re-apply badges on scroll (virtual scroll resilience) |
 | [#28](../../issues/28) | Fold all posts mode for easier navigation |
 | [#9](../../issues/9) | Category labels display properly (sentence case) |
 | [#13](../../issues/13) | Extension activation reliability on SPA navigation |
