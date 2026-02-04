@@ -1,6 +1,6 @@
 {
   "name": "linkedout",
-  "version": "0.1.0-beta",
+  "version": "0.1.0",
   "description": "AI-powered LinkedIn feed filter that learns from your preferences",
   "type": "module",
   "scripts": {
