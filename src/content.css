@@ -94,15 +94,15 @@
 }
 
 .lpf-badge__btn--approve:hover {
-  background: #e94560;
-  color: #fff;
-  border-color: #e94560;
-}
-
-.lpf-badge__btn--reject:hover {
   background: #2ed573;
   color: #0f0f1a;
   border-color: #2ed573;
+}
+
+.lpf-badge__btn--reject:hover {
+  background: #e94560;
+  color: #fff;
+  border-color: #e94560;
 }
 
 .lpf-badge__confirmed {
@@ -462,25 +462,25 @@
 }
 
 .lpf-btn--approve {
-  background: rgba(233, 69, 96, 0.15);
-  color: #e94560;
-  border-color: rgba(233, 69, 96, 0.3);
-}
-
-.lpf-btn--approve:hover {
-  background: #e94560;
-  color: #fff;
-}
-
-.lpf-btn--reject {
   background: rgba(46, 213, 115, 0.1);
   color: #2ed573;
   border-color: rgba(46, 213, 115, 0.25);
 }
 
-.lpf-btn--reject:hover {
+.lpf-btn--approve:hover {
   background: #2ed573;
   color: #0f0f1a;
+}
+
+.lpf-btn--reject {
+  background: rgba(233, 69, 96, 0.15);
+  color: #e94560;
+  border-color: rgba(233, 69, 96, 0.3);
+}
+
+.lpf-btn--reject:hover {
+  background: #e94560;
+  color: #fff;
 }
 
 .lpf-btn--scroll {
