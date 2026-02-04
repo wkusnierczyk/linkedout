@@ -279,8 +279,8 @@
         <span class="lpf-badge__reason">${escHtml(classification.reason || '')}</span>
         <div class="lpf-badge__buttons">
           <button class="lpf-badge__btn lpf-badge__btn--preview" title="Preview this post">👁</button>
-          <button class="lpf-badge__btn lpf-badge__btn--reject" title="Keep this post">＋</button>
-          <button class="lpf-badge__btn lpf-badge__btn--approve" title="Remove this post">－</button>
+          <button class="lpf-badge__btn lpf-badge__btn--reject" title="Wrong filter — keep this post">○</button>
+          <button class="lpf-badge__btn lpf-badge__btn--approve" title="Good filter — hide this post">◎</button>
         </div>
       `;
 
@@ -570,8 +570,8 @@
           `;
         } else {
           actionsHtml = `
-            <button class="lpf-btn lpf-btn--approve" data-action="approve" data-post-id="${escAttr(id)}" title="Yes, filter this">✓ Filter</button>
-            <button class="lpf-btn lpf-btn--reject" data-action="reject" data-post-id="${escAttr(id)}" title="No, keep this">✗ Keep</button>
+            <button class="lpf-btn lpf-btn--approve" data-action="approve" data-post-id="${escAttr(id)}" title="Good filter — hide this post">◎ Hit</button>
+            <button class="lpf-btn lpf-btn--reject" data-action="reject" data-post-id="${escAttr(id)}" title="Wrong filter — keep this post">○ Miss</button>
             <button class="lpf-btn lpf-btn--scroll" data-action="scroll" data-post-id="${escAttr(id)}" title="Scroll to post">↓</button>
           `;
         }
