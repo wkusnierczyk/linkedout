@@ -258,6 +258,57 @@ Using Haiku instead of Sonnet reduces costs by ~5×.
 - All feedback and interaction history is stored locally
 - You can export or delete all data from Settings
 
+## Legal Considerations
+
+### What LinkedOut Is
+
+LinkedOut is **source code**, not a service. It does not:
+- Provide any service to users
+- Access LinkedIn on your behalf
+- Store, transmit, or process your data on any server
+
+The code is offered under the MIT license. **You** decide whether and how to use it. Any actions taken using this code are your responsibility.
+
+### LinkedIn's Service Guarantees
+
+LinkedIn's [User Agreement](https://www.linkedin.com/legal/user-agreement) provides services "AS IS" with no quality guarantees:
+
+> "LINKEDIN AND ITS AFFILIATES MAKE NO REPRESENTATION OR WARRANTY ABOUT THE SERVICES"
+
+They explicitly disclaim "FITNESS FOR A PARTICULAR PURPOSE" — meaning they make no promise that content will be professional, relevant, or high-quality.
+
+### How the Code Works
+
+| Activity | How It Works | Notes |
+|----------|--------------|-------|
+| Scraping | Does not scrape — reads DOM you already have access to | No automated data collection |
+| Bots/automation | No bots — user-initiated, client-side filtering | You control when it runs |
+| Display modification | Client-side only, your browser, your view | Like any browser extension |
+| External API | Post content sent to Anthropic for classification | Requires your API key and explicit setup |
+
+### Your Responsibilities
+
+By using this code with the AI classification feature, you:
+- Provide your own Anthropic API key
+- Choose to send post content to a third-party API
+- Accept responsibility for compliance with LinkedIn's Terms of Service
+- Acknowledge that this may have consequences for your LinkedIn account
+
+### Your Rights
+
+- You have [data portability rights](https://www.linkedin.com/legal/privacy-policy) under LinkedIn's Privacy Policy
+- You control what happens in your own browser
+- LinkedIn does not guarantee content quality — filtering noise is a reasonable personal choice
+
+### Disclaimer
+
+LinkedOut is source code provided "as is" under the MIT license, without warranty of any kind. The authors:
+- Do not provide any service
+- Are not responsible for how you use this code
+- Are not lawyers; nothing here is legal advice
+
+Review LinkedIn's [User Agreement](https://www.linkedin.com/legal/user-agreement) and [Privacy Policy](https://www.linkedin.com/legal/privacy-policy) to understand your own obligations.
+
 ## Development
 
 ### Make Targets
