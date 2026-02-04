@@ -280,23 +280,37 @@
     if (!element.querySelector('.lpf-badge')) {
       const badge = document.createElement('div');
       badge.className = 'lpf-badge';
+
+      // Determine button HTML based on state
+      let buttonsHtml;
+      if (classification.confirmed) {
+        buttonsHtml = `
+          <button class="lpf-badge__btn lpf-badge__btn--preview" title="Preview this post">👁</button>
+          <span class="lpf-badge__confirmed">Confirmed</span>
+        `;
+      } else {
+        buttonsHtml = `
+          <button class="lpf-badge__btn lpf-badge__btn--preview" title="Preview this post">👁</button>
+          <button class="lpf-badge__btn lpf-badge__btn--approve" title="Good filter — hide this post">◎</button>
+          <button class="lpf-badge__btn lpf-badge__btn--reject" title="Wrong filter — keep this post">○</button>
+        `;
+      }
+
       badge.innerHTML = `
         <span class="lpf-badge__icon">⊘</span>
         <span class="lpf-badge__label">${escHtml(classification.categoryLabel || 'Filtered')}</span>
         <span class="lpf-badge__reason">${escHtml(classification.reason || '')}</span>
-        <div class="lpf-badge__buttons">
-          <button class="lpf-badge__btn lpf-badge__btn--preview" title="Preview this post">👁</button>
-          <button class="lpf-badge__btn lpf-badge__btn--approve" title="Good filter — hide this post">◎</button>
-          <button class="lpf-badge__btn lpf-badge__btn--reject" title="Wrong filter — keep this post">○</button>
-        </div>
+        <div class="lpf-badge__buttons">${buttonsHtml}</div>
       `;
 
-      badge.querySelector('.lpf-badge__btn--preview').addEventListener('click', (event) => {
+      // Preview button always exists
+      badge.querySelector('.lpf-badge__btn--preview')?.addEventListener('click', (event) => {
         event.stopPropagation();
         element.classList.toggle('lpf-filtered--revealed');
       });
 
-      badge.querySelector('.lpf-badge__btn--approve').addEventListener('click', (event) => {
+      // Approve/reject buttons only exist if not already confirmed
+      badge.querySelector('.lpf-badge__btn--approve')?.addEventListener('click', (event) => {
         event.stopPropagation();
         const content = getPostText(element);
         const author = getPostAuthor(element);
@@ -316,7 +330,7 @@
         showToast('Filter confirmed', 'info');
       });
 
-      badge.querySelector('.lpf-badge__btn--reject').addEventListener('click', (event) => {
+      badge.querySelector('.lpf-badge__btn--reject')?.addEventListener('click', (event) => {
         event.stopPropagation();
         const content = getPostText(element);
         const author = getPostAuthor(element);
