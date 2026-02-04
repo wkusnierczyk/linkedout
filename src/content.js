@@ -39,6 +39,12 @@
       filterConfirmed: 'Filter confirmed',
       postRestored: 'Post restored',
     },
+    fold: {
+      passedLabel: 'Passed',
+      previewPost: 'Preview this post',
+      foldAll: 'Fold all posts',
+      unfoldAll: 'Unfold all posts',
+    },
   };
 
   // ─── State ───────────────────────────────────────────────────────
@@ -54,6 +60,7 @@
     lastUrl: location.href, // for SPA navigation detection
     contextValid: true, // tracks if extension context is still valid
     scanning: false, // tracks if classification is in progress
+    foldAllMode: false, // when true, all posts are collapsed with badges
   };
 
   // ─── State Management ─────────────────────────────────────────────
@@ -300,6 +307,16 @@
         };
         if (result.filter) {
           applyFilterVisual(result.id, state.classifications[result.id]);
+        }
+        // Apply fold mode to newly classified posts
+        if (state.foldAllMode) {
+          const element = findPostElement(result.id);
+          if (element) {
+            if (!result.filter) {
+              applyPassedBadge(element, result.id, state.classifications[result.id]);
+            }
+            element.classList.add('lpf-folded');
+          }
         }
       }
 
@@ -602,6 +619,7 @@
       <div id="lpf-panel__header">
         <h3>LinkedOut</h3>
         <div id="lpf-panel__actions">
+          <button id="lpf-panel__fold-btn" title="${escAttr(LABELS.fold.foldAll)}">▤</button>
           <button id="lpf-panel__classify-btn" title="Rescan visible posts">Rescan</button>
           <button id="lpf-panel__close-btn" title="Close panel">✕</button>
         </div>
@@ -616,13 +634,14 @@
     document.body.appendChild(panel);
 
     document.getElementById('lpf-panel__close-btn').addEventListener('click', togglePanel);
+    document.getElementById('lpf-panel__fold-btn').addEventListener('click', toggleFoldMode);
     document.getElementById('lpf-panel__classify-btn').addEventListener('click', () => {
       state.processedPosts.clear();
       state.pendingPosts = [];
       state.classifications = {};
       // Remove existing filter visuals
-      document.querySelectorAll('.lpf-filtered').forEach((element) => {
-        element.classList.remove('lpf-filtered', 'lpf-filtered--revealed');
+      document.querySelectorAll('.lpf-filtered, .lpf-folded').forEach((element) => {
+        element.classList.remove('lpf-filtered', 'lpf-filtered--revealed', 'lpf-folded');
         const badge = element.querySelector('.lpf-badge');
         if (badge) badge.remove();
       });
@@ -630,6 +649,71 @@
     });
 
     return panel;
+  }
+
+  function toggleFoldMode() {
+    state.foldAllMode = !state.foldAllMode;
+
+    // Update button state
+    const foldBtn = document.getElementById('lpf-panel__fold-btn');
+    if (foldBtn) {
+      foldBtn.title = state.foldAllMode ? LABELS.fold.unfoldAll : LABELS.fold.foldAll;
+      foldBtn.classList.toggle('lpf-panel__fold-btn--active', state.foldAllMode);
+    }
+
+    // Apply or remove fold visuals on all classified posts
+    applyFoldModeToAllPosts();
+  }
+
+  function applyFoldModeToAllPosts() {
+    for (const [postId, classification] of Object.entries(state.classifications)) {
+      const element = findPostElement(postId);
+      if (!element) continue;
+
+      if (state.foldAllMode) {
+        // Fold all posts
+        if (classification.filter && !classification.rejected) {
+          // Filtered post: already has badge, just ensure folded class
+          element.classList.add('lpf-folded');
+        } else {
+          // Unfiltered/rejected post: add passed badge and fold
+          applyPassedBadge(element, postId, classification);
+          element.classList.add('lpf-folded');
+        }
+      } else {
+        // Unfold: remove fold class and passed badges
+        element.classList.remove('lpf-folded');
+        if (!classification.filter || classification.rejected) {
+          // Remove passed badge from unfiltered posts
+          const badge = element.querySelector('.lpf-badge--passed');
+          if (badge) badge.remove();
+        }
+      }
+    }
+  }
+
+  function applyPassedBadge(element, postId, classification) {
+    // Don't add if already has a passed badge
+    if (element.querySelector('.lpf-badge--passed')) return;
+
+    const badge = document.createElement('div');
+    badge.className = 'lpf-badge lpf-badge--passed';
+
+    badge.innerHTML = `
+      <span class="lpf-badge__icon">✓</span>
+      <span class="lpf-badge__label">${escHtml(LABELS.fold.passedLabel)}</span>
+      <span class="lpf-badge__author">${escHtml(classification.author || '')}</span>
+      <div class="lpf-badge__buttons">
+        <button class="lpf-badge__btn lpf-badge__btn--preview" title="${escAttr(LABELS.fold.previewPost)}">👁</button>
+      </div>
+    `;
+
+    badge.querySelector('.lpf-badge__btn--preview').addEventListener('click', (event) => {
+      event.stopPropagation();
+      element.classList.toggle('lpf-folded--revealed');
+    });
+
+    element.prepend(badge);
   }
 
   function createToggleButton() {
