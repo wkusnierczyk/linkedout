@@ -180,8 +180,12 @@
       element.dataset.lpfId = id;
 
       // Re-apply filter visual if we have a classification for this post
-      if (state.classifications[id]?.filter && !element.querySelector('.lpf-badge')) {
-        applyFilterVisual(id, state.classifications[id]);
+      const classification = state.classifications[id];
+      if (
+        (classification?.filter || classification?.rejected) &&
+        !element.querySelector('.lpf-badge')
+      ) {
+        applyFilterVisual(id, classification);
       }
 
       if (state.processedPosts.has(id)) continue;
@@ -275,7 +279,10 @@
     const element = findPostElement(postId);
     if (!element) return;
 
-    element.classList.add('lpf-filtered');
+    // Only hide content if post is filtered (not rejected)
+    if (classification.filter) {
+      element.classList.add('lpf-filtered');
+    }
 
     if (!element.querySelector('.lpf-badge')) {
       const badge = document.createElement('div');
@@ -283,7 +290,11 @@
 
       // Determine button HTML based on state
       let buttonsHtml;
-      if (classification.confirmed) {
+      if (classification.rejected) {
+        buttonsHtml = `
+          <span class="lpf-badge__rejected">Rejected</span>
+        `;
+      } else if (classification.confirmed) {
         buttonsHtml = `
           <button class="lpf-badge__btn lpf-badge__btn--preview" title="Preview this post">👁</button>
           <span class="lpf-badge__confirmed">Confirmed</span>
