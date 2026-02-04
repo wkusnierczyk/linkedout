@@ -16,13 +16,15 @@ define log
 endef
 
 # ─── Phony Targets ────────────────────────────────────────────────
-.PHONY: all install lint lint-fix format format-check test test-watch test-coverage check clean help
+.PHONY: all install install-dependencies lint lint-fix format format-check test test-watch test-coverage check clean help
 
 # ─── Default Target ───────────────────────────────────────────────
 all: check
 
 # ─── Dependencies ─────────────────────────────────────────────────
-install:
+install: install-dependencies
+
+install-dependencies:
 	$(NPM) install
 
 # ─── Linting ──────────────────────────────────────────────────────
@@ -59,7 +61,8 @@ clean:
 # ─── Help ─────────────────────────────────────────────────────────
 help:
 	$(call log,"Available targets:")
-	$(call log,"  install        - Install dependencies")
+	$(call log,"  install        - Install dependencies (alias for install-dependencies)")
+	$(call log,"  install-dependencies - Install npm dependencies")
 	$(call log,"  lint           - Run ESLint on $(SRC_DIR)/")
 	$(call log,"  lint-fix       - Run ESLint with auto-fix")
 	$(call log,"  format         - Format code with Prettier")
