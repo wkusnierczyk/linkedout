@@ -144,7 +144,7 @@ When a post is filtered, a badge appears at the top of the post:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ ⊘  [CATEGORY]  Reason for filtering...        👁  ○  ◎    │
+│ ⊘  [CATEGORY]  Reason for filtering...        👁  ◎  ○    │
 ├─────────────────────────────────────────────────────────────┤
 │                    (post content hidden)                    │
 └─────────────────────────────────────────────────────────────┘
@@ -156,8 +156,8 @@ When a post is filtered, a badge appears at the top of the post:
 | **[CATEGORY]** | The matched category (e.g., "Thought Leadership") |
 | **Reason** | Claude's explanation for why this post was filtered |
 | **👁 Preview** | Toggle post visibility — peek at the content without approving |
-| **○ Miss** | Wrong filter — restore the post and train the model that this was a mistake |
 | **◎ Hit** | Good filter — keep it hidden and train the model that this was correct |
+| **○ Miss** | Wrong filter — restore the post and train the model that this was a mistake |
 
 After you click **○** or **◎**, the buttons are replaced with a status label (**Confirmed** or **Rejected**).
 
@@ -197,11 +197,8 @@ Click the floating **⊘** button (bottom-right of LinkedIn) to open the review 
 |--------|-------------|
 | **◎ Hit** | Good filter — confirm and hide the post (trains the model) |
 | **○ Miss** | Wrong filter — reject and restore the post |
-| **↓** | Scroll to this post in the feed (best effort — may not work due to LinkedIn's virtual scrolling) |
 
 After confirming or rejecting, the card shows a status label and dims slightly. The corresponding badge on the post updates to match.
-
-> **Note**: Scroll-to-post functionality is unreliable due to LinkedIn's virtual scrolling which removes posts from DOM when scrolled out of view. See [#32](../../issues/32).
 
 ### Filter Categories
 

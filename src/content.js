@@ -286,8 +286,8 @@
         <span class="lpf-badge__reason">${escHtml(classification.reason || '')}</span>
         <div class="lpf-badge__buttons">
           <button class="lpf-badge__btn lpf-badge__btn--preview" title="Preview this post">👁</button>
-          <button class="lpf-badge__btn lpf-badge__btn--reject" title="Wrong filter — keep this post">○</button>
           <button class="lpf-badge__btn lpf-badge__btn--approve" title="Good filter — hide this post">◎</button>
+          <button class="lpf-badge__btn lpf-badge__btn--reject" title="Wrong filter — keep this post">○</button>
         </div>
       `;
 
@@ -567,19 +567,16 @@
           statusClass = 'lpf-review-card--confirmed';
           actionsHtml = `
             <span class="lpf-review-card__status lpf-review-card__status--confirmed">Confirmed</span>
-            <button class="lpf-btn lpf-btn--scroll" data-action="scroll" data-post-id="${escAttr(id)}" title="Scroll to post">↓</button>
           `;
         } else if (classification.rejected) {
           statusClass = 'lpf-review-card--rejected';
           actionsHtml = `
             <span class="lpf-review-card__status lpf-review-card__status--rejected">Rejected</span>
-            <button class="lpf-btn lpf-btn--scroll" data-action="scroll" data-post-id="${escAttr(id)}" title="Scroll to post">↓</button>
           `;
         } else {
           actionsHtml = `
             <button class="lpf-btn lpf-btn--approve" data-action="approve" data-post-id="${escAttr(id)}" title="Good filter — hide this post">◎ Hit</button>
             <button class="lpf-btn lpf-btn--reject" data-action="reject" data-post-id="${escAttr(id)}" title="Wrong filter — keep this post">○ Miss</button>
-            <button class="lpf-btn lpf-btn--scroll" data-action="scroll" data-post-id="${escAttr(id)}" title="Scroll to post">↓</button>
           `;
         }
 
@@ -625,12 +622,6 @@
     const action = button.dataset.action;
     const postId = button.dataset.postId;
     const classification = state.classifications[postId];
-
-    if (action === 'scroll') {
-      const element = findPostElement(postId);
-      if (element) element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      return;
-    }
 
     const postElement = findPostElement(postId);
     const content = postElement ? getPostText(postElement) : '';
