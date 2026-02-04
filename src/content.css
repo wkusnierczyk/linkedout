@@ -44,6 +44,12 @@
   --lpf-state-rejected-border: var(--lpf-color-success);
   --lpf-state-rejected-label-bg: var(--lpf-color-success);
   --lpf-state-rejected-label-text: #0a1a10;
+
+  /* State: Passed (for unfiltered posts in fold mode) */
+  --lpf-state-passed-bg: linear-gradient(135deg, #1a2d1a 0%, #101a10 100%);
+  --lpf-state-passed-border: var(--lpf-color-success);
+  --lpf-state-passed-label-bg: var(--lpf-color-success);
+  --lpf-state-passed-label-text: #0a1a10;
 }
 
 /* ─── Utility Classes ──────────────────────────────────────────── */
@@ -79,6 +85,52 @@
 
 .lpf-filtered--revealed .lpf-badge {
   opacity: 0.6;
+}
+
+/* ─── Fold Mode (all posts collapsed) ─────────────────────────── */
+
+.lpf-folded > *:not(.lpf-badge) {
+  display: none;
+}
+
+.lpf-folded {
+  position: relative;
+}
+
+.lpf-folded--revealed > *:not(.lpf-badge) {
+  display: revert;
+}
+
+.lpf-folded--revealed {
+  opacity: 0.7;
+}
+
+.lpf-folded--revealed .lpf-badge {
+  opacity: 0.6;
+}
+
+/* Passed badge (unfiltered posts in fold mode) */
+.lpf-badge--passed {
+  background: var(--lpf-state-passed-bg);
+  border-bottom-color: var(--lpf-state-passed-border);
+}
+
+.lpf-badge--passed .lpf-badge__icon {
+  color: var(--lpf-state-passed-border);
+}
+
+.lpf-badge--passed .lpf-badge__label {
+  background: var(--lpf-state-passed-label-bg);
+  color: var(--lpf-state-passed-label-text);
+}
+
+.lpf-badge--passed .lpf-badge__author {
+  color: var(--lpf-text-secondary);
+  font-weight: 400;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ─── Filter Badge ─────────────────────────────────────────────── */
@@ -319,6 +371,18 @@
   background: var(--lpf-color-danger);
   color: var(--lpf-text-on-color);
   border-color: var(--lpf-color-danger);
+}
+
+#lpf-panel__fold-btn.lpf-panel__fold-btn--active {
+  background: var(--lpf-color-success);
+  color: var(--lpf-state-passed-label-text);
+  border-color: var(--lpf-color-success);
+}
+
+#lpf-panel__fold-btn.lpf-panel__fold-btn--active:hover {
+  background: var(--lpf-color-danger);
+  border-color: var(--lpf-color-danger);
+  color: var(--lpf-text-on-color);
 }
 
 /* ─── Panel Stats ──────────────────────────────────────────────── */
