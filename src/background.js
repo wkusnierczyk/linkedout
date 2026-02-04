@@ -3,6 +3,7 @@
 
 import { classifyPostsLocally } from './patterns.js';
 import { processSignal, applyLearningToClassification } from './learning.js';
+import { DEFAULT_SELECTORS, DetectionStats } from './dom-healing.js';
 
 // ─── Default Settings ────────────────────────────────────────────────
 
@@ -636,6 +637,57 @@ const messageHandlers = {
   async checkApiKey() {
     const key = await getApiKey();
     return { configured: !!key };
+  },
+
+  // ─── Self-Healing DOM ───────────────────────────────────────────────
+
+  async getHealedSelectors() {
+    const { healedSelectors } = await getStorage('healedSelectors');
+    return { selectors: healedSelectors || DEFAULT_SELECTORS };
+  },
+
+  async storeHealedSelectors({ selectors }) {
+    await setStorage({
+      healedSelectors: selectors,
+      healedSelectorsTimestamp: Date.now(),
+    });
+    console.log('[LPF] Stored healed selectors:', selectors);
+    return { ok: true };
+  },
+
+  async recordDetectionResult({ success }) {
+    const { detectionStats: storedStats } = await getStorage('detectionStats');
+    const stats = DetectionStats.fromJSON(storedStats);
+    if (success) {
+      stats.recordSuccess();
+    } else {
+      stats.recordFailure();
+    }
+    await setStorage({ detectionStats: stats.toJSON() });
+
+    // Check if we need to notify about unhealthy state
+    if (!stats.isHealthy()) {
+      console.warn('[LPF] Detection health degraded:', stats.toJSON());
+    }
+
+    return { stats: stats.toJSON() };
+  },
+
+  async getDetectionStats() {
+    const { detectionStats: storedStats } = await getStorage('detectionStats');
+    const stats = DetectionStats.fromJSON(storedStats);
+    return { stats: stats.toJSON() };
+  },
+
+  async resetDetectionStats() {
+    const stats = new DetectionStats();
+    await setStorage({ detectionStats: stats.toJSON() });
+    return { stats: stats.toJSON() };
+  },
+
+  async clearHealedSelectors() {
+    await setStorage({ healedSelectors: null, healedSelectorsTimestamp: null });
+    return { ok: true };
   },
 };
 

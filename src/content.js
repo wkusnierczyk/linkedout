@@ -47,6 +47,18 @@
     },
   };
 
+  // ─── Default Selectors (can be overridden by healed selectors) ────
+
+  const DEFAULT_SELECTORS = {
+    mainContainer: 'main',
+    reactionButtonLabel: 'Reaction button state:',
+    minFeedChildren: 4,
+    maxSearchDepth: 15,
+    postTextSelectors: ['span[dir="ltr"]'],
+    authorLinkPatterns: ['a[href*="/in/"]', 'a[href*="/company/"]'],
+    postIdAttributes: ['data-urn', 'data-id'],
+  };
+
   // ─── State ───────────────────────────────────────────────────────
 
   const state = {
@@ -61,6 +73,8 @@
     contextValid: true, // tracks if extension context is still valid
     scanning: false, // tracks if classification is in progress
     foldAllMode: false, // when true, all posts are collapsed with badges
+    selectors: { ...DEFAULT_SELECTORS }, // current selectors (may be healed)
+    detectionHealthy: true, // tracks if detection is working
   };
 
   // ─── State Management ─────────────────────────────────────────────
@@ -77,6 +91,85 @@
 
   function getPendingFilterCount() {
     return Object.values(state.classifications).filter((c) => c.filter && !c.confirmed).length;
+  }
+
+  // ─── Self-Healing DOM ───────────────────────────────────────────
+
+  async function loadHealedSelectors() {
+    const response = await sendMessage({ type: 'getHealedSelectors' });
+    if (response?.selectors) {
+      state.selectors = { ...DEFAULT_SELECTORS, ...response.selectors };
+      console.log('[LPF] Loaded selectors:', state.selectors.reactionButtonLabel);
+    }
+  }
+
+  async function recordDetectionResult(success) {
+    const response = await sendMessage({ type: 'recordDetectionResult', success });
+    if (response?.stats) {
+      state.detectionHealthy = response.stats.isHealthy;
+      if (!state.detectionHealthy) {
+        console.warn('[LPF] Detection health degraded:', response.stats);
+        showDetectionWarning();
+      }
+    }
+  }
+
+  function showDetectionWarning() {
+    showToast('LinkedIn layout may have changed. Detection may be unreliable.', 'error');
+  }
+
+  /**
+   * Attempt to diagnose and heal selectors when detection fails.
+   * Returns true if healing was successful.
+   */
+  async function attemptSelfHealing() {
+    console.log('[LPF] Attempting self-healing...');
+
+    // Look for alternative reaction button patterns
+    const allButtons = document.querySelectorAll('button');
+    let foundPattern = null;
+
+    for (const button of allButtons) {
+      const label = button.getAttribute('aria-label') || '';
+      // Look for patterns that might be reaction buttons
+      if (
+        (label.includes('React') || label.includes('Like') || label.includes('reaction')) &&
+        label.includes(':')
+      ) {
+        const colonIndex = label.indexOf(':');
+        if (colonIndex > 0 && colonIndex < 50) {
+          foundPattern = label.slice(0, colonIndex + 1);
+          break;
+        }
+      }
+    }
+
+    if (foundPattern && foundPattern !== state.selectors.reactionButtonLabel) {
+      console.log('[LPF] Found alternative pattern:', foundPattern);
+
+      // Test if the new pattern works
+      const testSelectors = { ...state.selectors, reactionButtonLabel: foundPattern };
+      const oldSelectors = state.selectors;
+      state.selectors = testSelectors;
+
+      const feedList = findFeedList();
+      if (feedList) {
+        const posts = findAllPosts();
+        if (posts.length > 0) {
+          console.log('[LPF] Self-healing successful! Found', posts.length, 'posts with new pattern');
+          await sendMessage({ type: 'storeHealedSelectors', selectors: testSelectors });
+          await sendMessage({ type: 'resetDetectionStats' });
+          showToast('LinkedIn layout detected. Detection restored.', 'info');
+          return true;
+        }
+      }
+
+      // Healing failed, revert
+      state.selectors = oldSelectors;
+    }
+
+    console.log('[LPF] Self-healing failed, no alternative pattern found');
+    return false;
   }
 
   // ─── Safe Messaging ─────────────────────────────────────────────
@@ -119,7 +212,7 @@
     let hasReaction = false;
     for (const button of buttons) {
       const label = button.getAttribute('aria-label') || '';
-      if (label.startsWith('Reaction button state:')) {
+      if (label.startsWith(state.selectors.reactionButtonLabel)) {
         hasReaction = true;
         break;
       }
@@ -130,14 +223,14 @@
   function findFeedList() {
     // The feed is inside <main>. Find the center column (the one with reaction buttons),
     // then find the child container with many children.
-    const main = document.querySelector('main');
+    const main = document.querySelector(state.selectors.mainContainer);
     if (!main) return null;
 
-    // Find the deepest container with 4+ children inside main
+    // Find the deepest container with minFeedChildren+ children inside main
     function findRepeatingContainer(element, depth) {
-      if (depth > 15) return null;
+      if (depth > state.selectors.maxSearchDepth) return null;
       for (const child of element.children) {
-        if (child.children.length >= 4) {
+        if (child.children.length >= state.selectors.minFeedChildren) {
           // Verify at least some children look like posts
           const childArray = Array.from(child.children);
           const postLikeCount = childArray.filter((c) => isPostElement(c)).length;
@@ -218,8 +311,24 @@
     return { id, content, author, element };
   }
 
-  function processNewPosts() {
+  async function processNewPosts() {
     const allPosts = findAllPosts();
+
+    // Record detection result for self-healing tracking
+    const detectionSuccess = allPosts.length > 0;
+    if (isOnFeedPage()) {
+      recordDetectionResult(detectionSuccess);
+
+      // If detection failed and we're on a feed page, try self-healing
+      if (!detectionSuccess && !state.detectionHealthy) {
+        const healed = await attemptSelfHealing();
+        if (healed) {
+          // Retry with healed selectors
+          return processNewPosts();
+        }
+      }
+    }
+
     const newPosts = [];
 
     for (const element of allPosts) {
@@ -959,11 +1068,14 @@
       return;
     }
 
-    // Check API key
+    // Load any healed selectors from storage
+    await loadHealedSelectors();
+
+    // Check API key (only warn if LLM mode is enabled)
     const apiCheck = await sendMessage({ type: 'checkApiKey' });
     if (apiCheck?.error === 'context_invalidated') return;
 
-    if (!apiCheck?.configured) {
+    if (!apiCheck?.configured && settings?.filterMode === 'llm') {
       showToast('LinkedOut: Please set your API key in extension options.', 'error');
     }
 
