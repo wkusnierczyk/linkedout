@@ -291,7 +291,6 @@
         return;
       }
 
-      let filterCount = 0;
       for (const result of response.results) {
         const postData = postDataById[result.id] || {};
         state.classifications[result.id] = {
@@ -300,12 +299,13 @@
           author: postData.author,
         };
         if (result.filter) {
-          filterCount++;
           applyFilterVisual(result.id, state.classifications[result.id]);
         }
       }
 
-      updateBadge(filterCount > 0 ? String(filterCount) : '');
+      // Use total pending count, not just this batch's count
+      const pendingCount = getPendingFilterCount();
+      updateBadge(pendingCount > 0 ? String(pendingCount) : '');
       if (state.panelOpen) renderPanelContent();
     }, BATCH_DELAY_MS);
   }
