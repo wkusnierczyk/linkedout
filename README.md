@@ -171,7 +171,17 @@ When a post is filtered, a badge appears at the top of the post:
 | **◎ Hit** | Good filter — keep it hidden and train the model that this was correct |
 | **○ Miss** | Wrong filter — restore the post and train the model that this was a mistake |
 
-After you click **○** or **◎**, the buttons are replaced with a status label (**Confirmed** or **Rejected**).
+#### Badge Colors
+
+Badges are color-coded to indicate review status:
+
+| Color | State | Meaning |
+|-------|-------|---------|
+| **Orange** | Pending | Filtered but not yet reviewed — waiting for your decision |
+| **Red** | Confirmed | You approved the filter — post stays hidden |
+| **Green** | Rejected | You rejected the filter — post is restored |
+
+Decisions are reversible: confirmed badges show an undo (○) button, rejected badges show a re-filter (◎) button. Each action is recorded for learning, including reversals.
 
 ### Review Panel
 
@@ -187,7 +197,7 @@ Click the floating **⊘** button (bottom-right of LinkedIn) to open the review 
 │  │ Author Name      [CATEGORY]   │  │
 │  │ Post preview text here...     │  │
 │  │ Reason • 87%                  │  │
-│  │ [◎ Hit]  [○ Miss]  [↓]        │  │
+│  │ [◎ Hit]  [○ Miss]             │  │
 │  └────────────────────────────────┘  │
 │  ...                                 │
 └──────────────────────────────────────┘
@@ -209,8 +219,10 @@ Click the floating **⊘** button (bottom-right of LinkedIn) to open the review 
 |--------|-------------|
 | **◎ Hit** | Good filter — confirm and hide the post (trains the model) |
 | **○ Miss** | Wrong filter — reject and restore the post |
+| **○ Undo** | (On confirmed cards) Reverse decision — restore the post |
+| **◎ Undo** | (On rejected cards) Reverse decision — re-filter the post |
 
-After confirming or rejecting, the card shows a status label and dims slightly. The corresponding badge on the post updates to match.
+After confirming or rejecting, the card shows a status label (Confirmed/Rejected) with an undo button. Cards are color-coded to match badges: pending cards are neutral, confirmed cards have a red tint, rejected cards have a green tint.
 
 ### Filter Categories
 

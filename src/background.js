@@ -88,13 +88,12 @@ function sanitizeText(text) {
 // ─── AI Classification ───────────────────────────────────────────────
 
 function buildClassificationPrompt(posts, settings, preferenceProfile, recentFeedback) {
-  const enabledCategories = Object.entries(settings.categories)
-    .filter(([, v]) => v.enabled)
+  // Include ALL categories (not just enabled) so we can cache full classifications
+  const allCategories = Object.entries(settings.categories)
     .map(([id, v]) => `- **${id}**: ${v.description}`)
     .join('\n');
 
   const customCats = (settings.customCategories || [])
-    .filter((c) => c.enabled)
     .map((c) => `- **${c.id}**: ${c.description}`)
     .join('\n');
 
@@ -126,8 +125,8 @@ function buildClassificationPrompt(posts, settings, preferenceProfile, recentFee
 
   return `You are a LinkedIn post classifier. Analyze each post and determine whether it should be filtered from the user's feed.
 
-## Active Filter Categories
-${enabledCategories}
+## Filter Categories
+${allCategories}
 ${customCats}
 ${keywords}
 
@@ -166,100 +165,125 @@ async function classifyPosts(posts) {
     return { results: posts.map((p) => ({ id: p.id, filter: false })) };
   }
 
-  // Gather learned context
-  const { preferenceProfile, feedbackHistory } = await getStorage([
-    'preferenceProfile',
-    'feedbackHistory',
-  ]);
-  const recent = (feedbackHistory || []).slice(-20).map((f) => ({
-    feedback: f.feedback,
-    category: f.category,
-    contentPreview: (f.content || '').slice(0, 120),
-  }));
+  // Check cache for existing classifications
+  const { classificationCache = {} } = await getStorage('classificationCache');
+  const cachedResults = [];
+  const uncachedPosts = [];
 
-  const prompt = buildClassificationPrompt(posts, settings, preferenceProfile, recent);
-
-  try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
-      body: JSON.stringify({
-        model: settings.model || 'claude-sonnet-4-20250514',
-        max_tokens: 2048,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-    });
-
-    if (!response.ok) {
-      const errBody = await response.text();
-      console.error('API error:', response.status, errBody);
-      return { error: `API error ${response.status}: ${errBody.slice(0, 200)}` };
+  for (const post of posts) {
+    const cached = classificationCache[post.id];
+    if (cached) {
+      console.log(`[LPF] Cache hit for post ${post.id}`);
+      cachedResults.push(cached);
+    } else {
+      uncachedPosts.push(post);
     }
-
-    const data = await response.json();
-    const text = data.content
-      .filter((b) => b.type === 'text')
-      .map((b) => b.text)
-      .join('');
-
-    // Parse JSON — strip any accidental markdown fences
-    const clean = text
-      .replace(/```json\s*/g, '')
-      .replace(/```\s*/g, '')
-      .trim();
-    const results = JSON.parse(clean);
-
-    // Build lookup maps (lowercase ID → label) and enabled set
-    const categoryLabels = {};
-    const enabledCategoryIds = new Set();
-
-    for (const [id, cat] of Object.entries(settings.categories)) {
-      categoryLabels[id.toLowerCase()] = cat.label;
-      if (cat.enabled) enabledCategoryIds.add(id.toLowerCase());
-    }
-    for (const custom of settings.customCategories || []) {
-      categoryLabels[custom.id.toLowerCase()] = custom.label;
-      if (custom.enabled) enabledCategoryIds.add(custom.id.toLowerCase());
-    }
-
-    // Filter out results for disabled or unknown categories (case-insensitive)
-    console.log('[LPF] Enabled categories:', [...enabledCategoryIds]);
-    console.log('[LPF] Raw results from API:', JSON.stringify(results, null, 2));
-
-    const filteredResults = results.map((r) => {
-      if (!r.filter || !r.category) return r;
-
-      const categoryLower = r.category.toLowerCase();
-      const label = categoryLabels[categoryLower];
-      const isEnabled = enabledCategoryIds.has(categoryLower);
-
-      if (!label) {
-        console.log(`[LPF] Filtering out post ${r.id}: category "${r.category}" is unknown`);
-        return { ...r, filter: false, reason: 'Unknown category' };
-      }
-      if (!isEnabled) {
-        console.log(`[LPF] Filtering out post ${r.id}: category "${r.category}" is disabled`);
-        return { ...r, filter: false, reason: 'Category disabled by user' };
-      }
-      return { ...r, categoryLabel: label };
-    });
-
-    const filteredCount = filteredResults.filter((r) => r.filter).length;
-    console.log(`[LPF] Final result: ${filteredCount}/${filteredResults.length} posts to filter`);
-
-    // Store classification results
-    await storeClassifications(posts, filteredResults);
-
-    return { results: filteredResults };
-  } catch (err) {
-    console.error('Classification failed:', err);
-    return { error: `Classification failed: ${err.message}` };
   }
+
+  console.log(
+    `[LPF] Cache: ${cachedResults.length} hits, ${uncachedPosts.length} misses out of ${posts.length} posts`
+  );
+
+  // If all posts are cached, skip API call entirely
+  let apiResults = [];
+  if (uncachedPosts.length > 0) {
+    // Gather learned context
+    const { preferenceProfile, feedbackHistory } = await getStorage([
+      'preferenceProfile',
+      'feedbackHistory',
+    ]);
+    const recent = (feedbackHistory || []).slice(-20).map((f) => ({
+      feedback: f.feedback,
+      category: f.category,
+      contentPreview: (f.content || '').slice(0, 120),
+    }));
+
+    const prompt = buildClassificationPrompt(uncachedPosts, settings, preferenceProfile, recent);
+
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: settings.model || 'claude-sonnet-4-20250514',
+          max_tokens: 2048,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
+
+      if (!response.ok) {
+        const errBody = await response.text();
+        console.error('API error:', response.status, errBody);
+        return { error: `API error ${response.status}: ${errBody.slice(0, 200)}` };
+      }
+
+      const data = await response.json();
+      const text = data.content
+        .filter((b) => b.type === 'text')
+        .map((b) => b.text)
+        .join('');
+
+      // Parse JSON — strip any accidental markdown fences
+      const clean = text
+        .replace(/```json\s*/g, '')
+        .replace(/```\s*/g, '')
+        .trim();
+      apiResults = JSON.parse(clean);
+
+      // Store new classifications in cache (raw, before local filtering)
+      await storeClassifications(uncachedPosts, apiResults);
+    } catch (err) {
+      console.error('Classification failed:', err);
+      return { error: `Classification failed: ${err.message}` };
+    }
+  }
+
+  // Merge cached and new results
+  const allResults = [...cachedResults, ...apiResults];
+
+  // Build lookup maps (lowercase ID → label) and enabled set
+  const categoryLabels = {};
+  const enabledCategoryIds = new Set();
+
+  for (const [id, cat] of Object.entries(settings.categories)) {
+    categoryLabels[id.toLowerCase()] = cat.label;
+    if (cat.enabled) enabledCategoryIds.add(id.toLowerCase());
+  }
+  for (const custom of settings.customCategories || []) {
+    categoryLabels[custom.id.toLowerCase()] = custom.label;
+    if (custom.enabled) enabledCategoryIds.add(custom.id.toLowerCase());
+  }
+
+  // Apply local filtering based on enabled categories
+  console.log('[LPF] Enabled categories:', [...enabledCategoryIds]);
+
+  const filteredResults = allResults.map((r) => {
+    if (!r.filter || !r.category) return r;
+
+    const categoryLower = r.category.toLowerCase();
+    const label = categoryLabels[categoryLower];
+    const isEnabled = enabledCategoryIds.has(categoryLower);
+
+    if (!label) {
+      console.log(`[LPF] Filtering out post ${r.id}: category "${r.category}" is unknown`);
+      return { ...r, filter: false, reason: 'Unknown category' };
+    }
+    if (!isEnabled) {
+      console.log(`[LPF] Filtering out post ${r.id}: category "${r.category}" is disabled`);
+      return { ...r, filter: false, reason: 'Category disabled by user' };
+    }
+    return { ...r, categoryLabel: label };
+  });
+
+  const filteredCount = filteredResults.filter((r) => r.filter).length;
+  console.log(`[LPF] Final result: ${filteredCount}/${filteredResults.length} posts to filter`);
+
+  return { results: filteredResults };
 }
 
 async function storeClassifications(posts, results) {
