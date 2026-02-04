@@ -454,7 +454,8 @@
    */
   function refreshFeedbackUI() {
     if (state.panelOpen) renderPanelContent();
-    updateBadge(String(getPendingFilterCount()));
+    const count = getPendingFilterCount();
+    updateBadge(count > 0 ? String(count) : '');
   }
 
   function handleFeedback(badge, element, postId, feedback) {
