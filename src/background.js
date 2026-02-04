@@ -1,12 +1,17 @@
 // LinkedIn Post Filter — Background Service Worker
 // Handles: AI classification, feedback storage, preference learning
 
+import { classifyPostsLocally } from './patterns.js';
+
 // ─── Default Settings ────────────────────────────────────────────────
 
 const DEFAULT_SETTINGS = {
   enabled: true,
   autoClassify: true,
   sensitivity: 'medium', // low | medium | high
+  filterMode: 'local', // 'local' | 'llm' — local is default for privacy
+  llmConsent: false, // explicit consent for LLM usage
+  llmConsentTimestamp: null, // when consent was given
   categories: {
     ai_generated: {
       enabled: true,
@@ -85,6 +90,26 @@ function sanitizeText(text) {
     .replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '\uFFFD');
 }
 
+// ─── Cache Utilities ────────────────────────────────────────────────
+
+async function checkCacheForPosts(posts) {
+  const { classificationCache = {} } = await getStorage('classificationCache');
+  const cachedResults = [];
+  const uncachedPosts = [];
+
+  for (const post of posts) {
+    const cached = classificationCache[post.id];
+    if (cached) {
+      cachedResults.push(cached);
+    } else {
+      uncachedPosts.push(post);
+    }
+  }
+
+  console.log(`[LPF] Cache: ${cachedResults.length} hits, ${uncachedPosts.length} misses`);
+  return { cachedResults, uncachedPosts };
+}
+
 // ─── AI Classification ───────────────────────────────────────────────
 
 function buildClassificationPrompt(posts, settings, preferenceProfile, recentFeedback) {
@@ -155,39 +180,62 @@ Respond ONLY with a JSON array (no markdown fences, no preamble):
 }
 
 async function classifyPosts(posts) {
-  const apiKey = await getApiKey();
-  if (!apiKey) {
-    return { error: 'No API key configured. Open extension options to set it.' };
-  }
-
   const settings = await getSettings();
   if (!settings.enabled) {
     return { results: posts.map((p) => ({ id: p.id, filter: false })) };
   }
 
-  // Check cache for existing classifications
-  const { classificationCache = {} } = await getStorage('classificationCache');
-  const cachedResults = [];
-  const uncachedPosts = [];
+  // Route based on filter mode
+  const filterMode = settings.filterMode || 'local';
+  console.log(`[LPF] Classification mode: ${filterMode}`);
 
-  for (const post of posts) {
-    const cached = classificationCache[post.id];
-    if (cached) {
-      console.log(`[LPF] Cache hit for post ${post.id}`);
-      cachedResults.push(cached);
-    } else {
-      uncachedPosts.push(post);
-    }
+  if (filterMode === 'local') {
+    return classifyPostsLocal(posts, settings);
+  } else {
+    return classifyPostsLLM(posts, settings);
+  }
+}
+
+// ─── Local Pattern Classification ────────────────────────────────────
+
+async function classifyPostsLocal(posts, settings) {
+  console.log(`[LPF] Classifying ${posts.length} posts using local patterns`);
+
+  const { cachedResults, uncachedPosts } = await checkCacheForPosts(posts);
+
+  // Classify uncached posts locally
+  let localResults = [];
+  if (uncachedPosts.length > 0) {
+    localResults = classifyPostsLocally(uncachedPosts, settings);
+    await storeClassifications(uncachedPosts, localResults);
   }
 
-  console.log(
-    `[LPF] Cache: ${cachedResults.length} hits, ${uncachedPosts.length} misses out of ${posts.length} posts`
-  );
+  // Merge and apply category filtering
+  const allResults = [...cachedResults, ...localResults];
+  return { results: applyEnabledCategoryFilter(allResults, settings) };
+}
 
-  // If all posts are cached, skip API call entirely
+// ─── LLM Classification ──────────────────────────────────────────────
+
+async function classifyPostsLLM(posts, settings) {
+  // Check for API key
+  const apiKey = await getApiKey();
+  if (!apiKey) {
+    return { error: 'No API key configured. Open extension options to set it.' };
+  }
+
+  // Check for consent
+  if (!settings.llmConsent) {
+    return { error: 'LLM mode requires consent. Please enable it in settings.' };
+  }
+
+  console.log(`[LPF] Classifying ${posts.length} posts using LLM`);
+
+  const { cachedResults, uncachedPosts } = await checkCacheForPosts(posts);
+
+  // Call LLM for uncached posts
   let apiResults = [];
   if (uncachedPosts.length > 0) {
-    // Gather learned context
     const { preferenceProfile, feedbackHistory } = await getStorage([
       'preferenceProfile',
       'feedbackHistory',
@@ -228,14 +276,12 @@ async function classifyPosts(posts) {
         .map((b) => b.text)
         .join('');
 
-      // Parse JSON — strip any accidental markdown fences
       const clean = text
         .replace(/```json\s*/g, '')
         .replace(/```\s*/g, '')
         .trim();
       apiResults = JSON.parse(clean);
 
-      // Store new classifications in cache (raw, before local filtering)
       await storeClassifications(uncachedPosts, apiResults);
     } catch (err) {
       console.error('Classification failed:', err);
@@ -243,9 +289,14 @@ async function classifyPosts(posts) {
     }
   }
 
-  // Merge cached and new results
+  // Merge and apply category filtering
   const allResults = [...cachedResults, ...apiResults];
+  return { results: applyEnabledCategoryFilter(allResults, settings) };
+}
 
+// ─── Shared Filtering ────────────────────────────────────────────────
+
+function applyEnabledCategoryFilter(results, settings) {
   // Build lookup maps (lowercase ID → label) and enabled set
   const categoryLabels = {};
   const enabledCategoryIds = new Set();
@@ -259,10 +310,9 @@ async function classifyPosts(posts) {
     if (custom.enabled) enabledCategoryIds.add(custom.id.toLowerCase());
   }
 
-  // Apply local filtering based on enabled categories
   console.log('[LPF] Enabled categories:', [...enabledCategoryIds]);
 
-  const filteredResults = allResults.map((r) => {
+  const filteredResults = results.map((r) => {
     if (!r.filter || !r.category) return r;
 
     const categoryLower = r.category.toLowerCase();
@@ -283,7 +333,7 @@ async function classifyPosts(posts) {
   const filteredCount = filteredResults.filter((r) => r.filter).length;
   console.log(`[LPF] Final result: ${filteredCount}/${filteredResults.length} posts to filter`);
 
-  return { results: filteredResults };
+  return filteredResults;
 }
 
 async function storeClassifications(posts, results) {

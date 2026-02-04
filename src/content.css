@@ -1,5 +1,60 @@
 /* LinkedIn Post Filter — Injected Styles */
 
+/* ─── Theme Variables ──────────────────────────────────────────── */
+
+:root {
+  /* Base colors */
+  --lpf-bg-dark: #0f0f1a;
+  --lpf-bg-panel: #1a1a2e;
+  --lpf-bg-card: #16213e;
+  --lpf-text-primary: #e0e0e0;
+  --lpf-text-secondary: #a0a0b0;
+  --lpf-text-muted: #8888a0;
+  --lpf-text-highlight: #c0c0d0;
+  --lpf-text-on-color: var(--lpf-text-on-color);
+  --lpf-border-subtle: #334;
+  --lpf-border-dark: #445;
+  --lpf-border-light: #556;
+  --lpf-border-card: #252545;
+
+  /* Gradients */
+  --lpf-gradient-panel: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+
+  /* Semantic colors */
+  --lpf-color-warning: #ffa502; /* Orange - pending/in-progress */
+  --lpf-color-danger: #e94560; /* Red - hidden/filtered */
+  --lpf-color-success: #2ed573; /* Green - restored/positive */
+  --lpf-color-info: #4ecdc4; /* Cyan - informational */
+
+  /* State: Pending (uses warning color) */
+  --lpf-state-pending-bg: linear-gradient(135deg, #2d2010 0%, #1a1508 100%);
+  --lpf-state-pending-border: var(--lpf-color-warning);
+  --lpf-state-pending-label-bg: var(--lpf-color-warning);
+  --lpf-state-pending-label-text: #1a1508;
+
+  /* State: Confirmed (uses danger color - post is hidden) */
+  --lpf-bg-danger-tint: #2d1020;
+  --lpf-state-confirmed-bg: linear-gradient(135deg, #2d1020 0%, #1a0a15 100%);
+  --lpf-state-confirmed-border: var(--lpf-color-danger);
+  --lpf-state-confirmed-label-bg: var(--lpf-color-danger);
+  --lpf-state-confirmed-label-text: #fff;
+
+  /* State: Rejected (uses success color - post is restored) */
+  --lpf-state-rejected-bg: linear-gradient(135deg, #0d2d1a 0%, #0a1a10 100%);
+  --lpf-state-rejected-border: var(--lpf-color-success);
+  --lpf-state-rejected-label-bg: var(--lpf-color-success);
+  --lpf-state-rejected-label-text: #0a1a10;
+}
+
+/* ─── Utility Classes ──────────────────────────────────────────── */
+
+/* High-specificity hidden class to override display without !important */
+.lpf-badge .lpf-badge__btn.lpf-hidden,
+.lpf-review-card .lpf-btn.lpf-hidden,
+.lpf-hidden.lpf-hidden {
+  display: none;
+}
+
 /* ─── Filtered Post Overlay ────────────────────────────────────── */
 
 .lpf-filtered > *:not(.lpf-badge) {
@@ -35,26 +90,26 @@
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: linear-gradient(135deg, #2d2010 0%, #1a1508 100%);
-  color: #e0e0e0;
+  background: var(--lpf-state-pending-bg);
+  color: var(--lpf-text-primary);
   font-size: 12px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  border-bottom: 2px solid #ffa502;
+  border-bottom: 2px solid var(--lpf-state-pending-border);
   border-radius: 8px 8px 0 0;
   opacity: 1;
   transition: all 0.2s ease;
 }
 
-/* Default (pending) state: orange */
+/* Default (pending) state: warning/orange */
 .lpf-badge__icon {
   font-size: 16px;
-  color: #ffa502;
+  color: var(--lpf-state-pending-border);
   flex-shrink: 0;
 }
 
 .lpf-badge__label {
-  background: #ffa502;
-  color: #1a1508;
+  background: var(--lpf-state-pending-label-bg);
+  color: var(--lpf-state-pending-label-text);
   padding: 2px 8px;
   border-radius: 10px;
   font-size: 10px;
@@ -64,34 +119,34 @@
   flex-shrink: 0;
 }
 
-/* Confirmed filter: red-tinted badge */
+/* Confirmed filter: danger/red-tinted badge */
 .lpf-badge--confirmed {
-  background: linear-gradient(135deg, #2d1020 0%, #1a0a15 100%);
-  border-bottom-color: #e94560;
+  background: var(--lpf-state-confirmed-bg);
+  border-bottom-color: var(--lpf-state-confirmed-border);
 }
 
 .lpf-badge--confirmed .lpf-badge__icon {
-  color: #e94560;
+  color: var(--lpf-state-confirmed-border);
 }
 
 .lpf-badge--confirmed .lpf-badge__label {
-  background: #e94560;
-  color: #fff;
+  background: var(--lpf-state-confirmed-label-bg);
+  color: var(--lpf-state-confirmed-label-text);
 }
 
-/* Rejected filter: green-tinted badge */
+/* Rejected filter: success/green-tinted badge */
 .lpf-badge--rejected {
-  background: linear-gradient(135deg, #0d2d1a 0%, #0a1a10 100%);
-  border-bottom-color: #2ed573;
+  background: var(--lpf-state-rejected-bg);
+  border-bottom-color: var(--lpf-state-rejected-border);
 }
 
 .lpf-badge--rejected .lpf-badge__icon {
-  color: #2ed573;
+  color: var(--lpf-state-rejected-border);
 }
 
 .lpf-badge--rejected .lpf-badge__label {
-  background: #2ed573;
-  color: #0a1a10;
+  background: var(--lpf-state-rejected-label-bg);
+  color: var(--lpf-state-rejected-label-text);
 }
 
 .lpf-badge__reason {
@@ -99,7 +154,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #a0a0b0;
+  color: var(--lpf-text-secondary);
 }
 
 .lpf-badge__buttons {
@@ -110,8 +165,8 @@
 
 .lpf-badge__btn {
   background: none;
-  border: 1px solid #445;
-  color: #a0a0b0;
+  border: 1px solid var(--lpf-border-dark);
+  color: var(--lpf-text-secondary);
   cursor: pointer;
   padding: 2px 8px;
   border-radius: 4px;
@@ -120,32 +175,32 @@
 }
 
 .lpf-badge__btn--preview:hover {
-  background: #445;
-  color: #fff;
-  border-color: #556;
+  background: var(--lpf-border-dark);
+  color: var(--lpf-text-on-color);
+  border-color: var(--lpf-border-light);
 }
 
 .lpf-badge__btn--approve:hover {
-  background: #2ed573;
-  color: #0f0f1a;
-  border-color: #2ed573;
+  background: var(--lpf-color-success);
+  color: var(--lpf-bg-dark);
+  border-color: var(--lpf-color-success);
 }
 
 .lpf-badge__btn--reject:hover {
-  background: #e94560;
-  color: #fff;
-  border-color: #e94560;
+  background: var(--lpf-color-danger);
+  color: var(--lpf-text-on-color);
+  border-color: var(--lpf-color-danger);
 }
 
 .lpf-badge__confirmed {
   font-size: 11px;
-  color: #2ed573;
+  color: var(--lpf-color-success);
   font-weight: 600;
 }
 
 .lpf-badge__rejected {
   font-size: 11px;
-  color: #ffa502;
+  color: var(--lpf-color-warning);
   font-weight: 600;
 }
 
@@ -160,8 +215,8 @@
   height: 52px;
   border-radius: 50%;
   border: none;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  color: #e94560;
+  background: var(--lpf-gradient-panel);
+  color: var(--lpf-color-danger);
   font-size: 22px;
   cursor: pointer;
   box-shadow:
@@ -189,8 +244,8 @@
   position: absolute;
   top: -4px;
   right: -4px;
-  background: #e94560;
-  color: #fff;
+  background: var(--lpf-color-danger);
+  color: var(--lpf-text-on-color);
   font-size: 11px;
   font-weight: 700;
   min-width: 20px;
@@ -212,8 +267,8 @@
   width: 400px;
   height: 100vh;
   z-index: 10001;
-  background: #0f0f1a;
-  color: #e0e0e0;
+  background: var(--lpf-bg-dark);
+  color: var(--lpf-text-primary);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   box-shadow: -4px 0 24px rgba(0, 0, 0, 0.5);
   transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -231,8 +286,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  border-bottom: 2px solid #e94560;
+  background: var(--lpf-gradient-panel);
+  border-bottom: 2px solid var(--lpf-color-danger);
   flex-shrink: 0;
 }
 
@@ -240,7 +295,7 @@
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: #fff;
+  color: var(--lpf-text-on-color);
   letter-spacing: -0.3px;
 }
 
@@ -251,8 +306,8 @@
 
 #lpf-panel__actions button {
   background: none;
-  border: 1px solid #334;
-  color: #a0a0b0;
+  border: 1px solid var(--lpf-border-subtle);
+  color: var(--lpf-text-secondary);
   cursor: pointer;
   padding: 4px 10px;
   border-radius: 6px;
@@ -261,9 +316,9 @@
 }
 
 #lpf-panel__actions button:hover {
-  background: #e94560;
-  color: #fff;
-  border-color: #e94560;
+  background: var(--lpf-color-danger);
+  color: var(--lpf-text-on-color);
+  border-color: var(--lpf-color-danger);
 }
 
 /* ─── Panel Stats ──────────────────────────────────────────────── */
@@ -273,24 +328,24 @@
   align-items: baseline;
   gap: 12px;
   padding: 12px 20px;
-  border-bottom: 1px solid #1a1a2e;
+  border-bottom: 1px solid var(--lpf-bg-panel);
   flex-shrink: 0;
 }
 
 .lpf-stat {
   font-size: 13px;
-  color: #8888a0;
+  color: var(--lpf-text-muted);
 }
 
 .lpf-stat strong {
-  color: #e94560;
+  color: var(--lpf-color-danger);
   font-size: 16px;
   font-weight: 700;
   margin-right: 4px;
 }
 
 .lpf-stat--scanning {
-  color: #4ecdc4;
+  color: var(--lpf-color-info);
   font-weight: 600;
   animation: lpf-pulse 1.5s ease-in-out infinite;
 }
@@ -318,11 +373,11 @@
 }
 
 #lpf-panel__list::-webkit-scrollbar-track {
-  background: #0f0f1a;
+  background: var(--lpf-bg-dark);
 }
 
 #lpf-panel__list::-webkit-scrollbar-thumb {
-  background: #334;
+  background: var(--lpf-border-subtle);
   border-radius: 3px;
 }
 
@@ -330,7 +385,7 @@
   display: none;
   padding: 40px 20px;
   text-align: center;
-  color: #556;
+  color: var(--lpf-border-light);
 }
 
 #lpf-panel__empty p {
@@ -339,14 +394,14 @@
 
 .lpf-panel__hint {
   font-size: 12px;
-  color: #445;
+  color: var(--lpf-border-dark);
 }
 
 /* ─── Review Card ──────────────────────────────────────────────── */
 
 .lpf-review-card {
-  background: #1a1a2e;
-  border: 1px solid #252545;
+  background: var(--lpf-bg-panel);
+  border: 1px solid var(--lpf-border-card);
   border-radius: 10px;
   padding: 14px;
   margin-bottom: 10px;
@@ -354,7 +409,7 @@
 }
 
 .lpf-review-card:hover {
-  border-color: #e94560;
+  border-color: var(--lpf-color-danger);
 }
 
 .lpf-review-card--dismissed {
@@ -368,12 +423,12 @@
 
 .lpf-review-card--confirmed {
   opacity: 0.6;
-  border-color: #2ed573;
+  border-color: var(--lpf-color-success);
 }
 
 .lpf-review-card--rejected {
   opacity: 0.6;
-  border-color: #ffa502;
+  border-color: var(--lpf-color-warning);
 }
 
 .lpf-review-card__status {
@@ -384,12 +439,12 @@
 }
 
 .lpf-review-card__status--confirmed {
-  color: #2ed573;
+  color: var(--lpf-color-success);
   background: rgba(46, 213, 115, 0.15);
 }
 
 .lpf-review-card__status--rejected {
-  color: #ffa502;
+  color: var(--lpf-color-warning);
   background: rgba(255, 165, 2, 0.15);
 }
 
@@ -403,7 +458,7 @@
 .lpf-review-card__author {
   font-weight: 600;
   font-size: 13px;
-  color: #c0c0d0;
+  color: var(--lpf-text-highlight);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -411,8 +466,8 @@
 }
 
 .lpf-review-card__category {
-  background: #e94560;
-  color: #fff;
+  background: var(--lpf-color-danger);
+  color: var(--lpf-text-on-color);
   padding: 2px 8px;
   border-radius: 10px;
   font-size: 10px;
@@ -424,7 +479,7 @@
 .lpf-review-card__preview {
   font-size: 13px;
   line-height: 1.6;
-  color: #8888a0;
+  color: var(--lpf-text-muted);
   margin-bottom: 4px;
   white-space: pre-wrap;
   overflow: hidden;
@@ -438,7 +493,7 @@
 .lpf-review-card__expand {
   background: none;
   border: none;
-  color: #e94560;
+  color: var(--lpf-color-danger);
   font-size: 11px;
   cursor: pointer;
   padding: 0;
@@ -454,7 +509,7 @@
   align-items: center;
   justify-content: space-between;
   font-size: 11px;
-  color: #556;
+  color: var(--lpf-border-light);
   margin-bottom: 10px;
   gap: 8px;
 }
@@ -467,7 +522,7 @@
 }
 
 .lpf-review-card__confidence {
-  color: #e94560;
+  color: var(--lpf-color-danger);
   font-weight: 700;
   font-size: 12px;
   flex-shrink: 0;
@@ -494,37 +549,37 @@
 
 .lpf-btn--approve {
   background: rgba(46, 213, 115, 0.1);
-  color: #2ed573;
+  color: var(--lpf-color-success);
   border-color: rgba(46, 213, 115, 0.25);
 }
 
 .lpf-btn--approve:hover {
-  background: #2ed573;
-  color: #0f0f1a;
+  background: var(--lpf-color-success);
+  color: var(--lpf-bg-dark);
 }
 
 .lpf-btn--reject {
   background: rgba(233, 69, 96, 0.15);
-  color: #e94560;
+  color: var(--lpf-color-danger);
   border-color: rgba(233, 69, 96, 0.3);
 }
 
 .lpf-btn--reject:hover {
-  background: #e94560;
-  color: #fff;
+  background: var(--lpf-color-danger);
+  color: var(--lpf-text-on-color);
 }
 
 .lpf-btn--scroll {
   flex: 0;
   background: rgba(100, 100, 160, 0.1);
-  color: #8888a0;
+  color: var(--lpf-text-muted);
   border-color: rgba(100, 100, 160, 0.25);
   padding: 6px 10px;
 }
 
 .lpf-btn--scroll:hover {
-  background: #445;
-  color: #fff;
+  background: var(--lpf-border-dark);
+  color: var(--lpf-text-on-color);
 }
 
 /* ─── Toast Notifications ──────────────────────────────────────── */
@@ -558,13 +613,13 @@
 }
 
 .lpf-toast--info {
-  background: #1a1a2e;
-  color: #a0a0b0;
-  border: 1px solid #334;
+  background: var(--lpf-bg-panel);
+  color: var(--lpf-text-secondary);
+  border: 1px solid var(--lpf-border-subtle);
 }
 
 .lpf-toast--error {
-  background: #2d1020;
-  color: #e94560;
-  border: 1px solid #e94560;
+  background: var(--lpf-bg-danger-tint);
+  color: var(--lpf-color-danger);
+  border: 1px solid var(--lpf-color-danger);
 }
