@@ -97,10 +97,14 @@
 
   async function loadHealedSelectors() {
     const response = await sendMessage({ type: 'getHealedSelectors' });
+    if (response?.error) {
+      console.warn('[LPF] Failed to load selectors:', response.error);
+      return;
+    }
     if (response?.selectors) {
       state.selectors = { ...DEFAULT_SELECTORS, ...response.selectors };
-      console.log('[LPF] Loaded selectors:', state.selectors.reactionButtonLabel);
     }
+    console.log('[LPF] Using selectors:', state.selectors.reactionButtonLabel);
   }
 
   async function recordDetectionResult(success) {
