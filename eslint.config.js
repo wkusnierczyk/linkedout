@@ -58,7 +58,7 @@ export default [
     },
   },
   {
-    files: ['src/background.js', 'src/patterns.js'],
+    files: ['src/background.js', 'src/patterns.js', 'src/learning.js'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module', // ES modules for service worker

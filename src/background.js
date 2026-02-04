@@ -2,6 +2,7 @@
 // Handles: AI classification, feedback storage, preference learning
 
 import { classifyPostsLocally } from './patterns.js';
+import { processSignal, applyLearningToClassification } from './learning.js';
 
 // ─── Default Settings ────────────────────────────────────────────────
 
@@ -202,16 +203,33 @@ async function classifyPostsLocal(posts, settings) {
   console.log(`[LPF] Classifying ${posts.length} posts using local patterns`);
 
   const { cachedResults, uncachedPosts } = await checkCacheForPosts(posts);
+  const { learningData } = await getStorage('learningData');
 
   // Classify uncached posts locally
   let localResults = [];
   if (uncachedPosts.length > 0) {
-    localResults = classifyPostsLocally(uncachedPosts, settings);
+    const rawResults = classifyPostsLocally(uncachedPosts, settings);
+
+    // Apply learning adjustments to each result
+    localResults = rawResults.map((result, idx) => {
+      const post = uncachedPosts[idx];
+      return applyLearningToClassification(result, post.author, post.content, learningData);
+    });
+
     await storeClassifications(uncachedPosts, localResults);
   }
 
+  // Apply learning to cached results too (in case learning data changed)
+  const adjustedCached = cachedResults.map((result) => {
+    const post = posts.find((p) => p.id === result.id);
+    if (post && !result.learningApplied) {
+      return applyLearningToClassification(result, post.author, post.content, learningData);
+    }
+    return result;
+  });
+
   // Merge and apply category filtering
-  const allResults = [...cachedResults, ...localResults];
+  const allResults = [...adjustedCached, ...localResults];
   return { results: applyEnabledCategoryFilter(allResults, settings) };
 }
 
@@ -355,11 +373,15 @@ async function storeClassifications(posts, results) {
 
 // ─── Feedback & Interaction Recording ────────────────────────────────
 
-async function recordFeedback(postId, content, author, category, feedback) {
-  const { feedbackHistory = [], feedbackCountSinceRegen = 0 } = await getStorage([
-    'feedbackHistory',
-    'feedbackCountSinceRegen',
-  ]);
+async function recordFeedback(postId, content, author, category, feedback, matchedPatterns) {
+  const {
+    feedbackHistory = [],
+    feedbackCountSinceRegen = 0,
+    classificationCache = {},
+  } = await getStorage(['feedbackHistory', 'feedbackCountSinceRegen', 'classificationCache']);
+
+  // Get matched patterns from cache if not provided
+  const patterns = matchedPatterns || classificationCache[postId]?.matchedPatterns || [];
 
   feedbackHistory.push({
     postId,
@@ -381,6 +403,15 @@ async function recordFeedback(postId, content, author, category, feedback) {
 
   // Update stats
   await updateStats(feedback === 'approved' ? 'approved' : 'rejected');
+
+  // Process signal for local learning
+  const signal = feedback === 'approved' ? 'filterApproved' : 'filterRejected';
+  await processSignal(
+    signal,
+    { author, content, category, matchedPatterns: patterns },
+    getStorage,
+    setStorage
+  );
 
   // Auto-regenerate preference profile if threshold reached
   if (newCount >= PROFILE_REGEN_THRESHOLD) {
@@ -409,6 +440,9 @@ async function recordInteraction(postId, content, author, interaction) {
   } else if (interaction === 'hidden' || interaction === 'unfollowed') {
     await updateStats('implicitFilter');
   }
+
+  // Process signal for local learning
+  await processSignal(interaction, { author, content }, getStorage, setStorage);
 }
 
 async function updateStats(type) {
