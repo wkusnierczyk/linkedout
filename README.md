@@ -12,9 +12,21 @@
 
 ## Status
 
-[**WIP**] Work in progress.  
+[**WIP**] Work in progress.
 LinkedOut is currently in a prototyping phase.
 
+## Table of Contents
+
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Architecture](#architecture)
+- [Usage](#usage)
+- [Cost Estimate](#cost-estimate)
+- [Privacy](#privacy)
+- [Legal Considerations](#legal-considerations)
+- [Development](#development)
+- [Known Limitations](#known-limitations)
+- [Roadmap](#roadmap)
 
 ## Features
 
@@ -265,6 +277,7 @@ LinkedOut is **source code**, not a service. It does not:
 - Provide any service to users
 - Access LinkedIn on your behalf
 - Store, transmit, or process your data on any server
+- **Export any feed data** — unless you explicitly enable LLM classification by configuring your own API key
 
 The code is offered under the MIT license. **You** decide whether and how to use it. Any actions taken using this code are your responsibility.
 
@@ -287,11 +300,13 @@ They explicitly disclaim "FITNESS FOR A PARTICULAR PURPOSE" — meaning they mak
 
 ### Your Responsibilities
 
-By using this code with the AI classification feature, you:
-- Provide your own Anthropic API key
+By enabling the AI classification feature (providing your own API key), **you** — not LinkedOut:
 - Choose to send post content to a third-party API
-- Accept responsibility for compliance with LinkedIn's Terms of Service
+- Accept full responsibility for compliance with LinkedIn's Terms of Service
+- May be liable for any violation of LinkedIn's policies regarding data export
 - Acknowledge that this may have consequences for your LinkedIn account
+
+Without an API key configured, LinkedOut does not transmit any data externally.
 
 ### Your Rights
 
