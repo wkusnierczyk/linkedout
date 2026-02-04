@@ -197,9 +197,11 @@ Click the floating **⊘** button (bottom-right of LinkedIn) to open the review 
 |--------|-------------|
 | **◎ Hit** | Good filter — confirm and hide the post (trains the model) |
 | **○ Miss** | Wrong filter — reject and restore the post |
-| **↓** | Scroll to this post in the feed |
+| **↓** | Scroll to this post in the feed (best effort — may not work due to LinkedIn's virtual scrolling) |
 
-Clicking anywhere on a card scrolls to the post. After confirming or rejecting, the card shows a status label and dims slightly. The corresponding badge on the post updates to match.
+After confirming or rejecting, the card shows a status label and dims slightly. The corresponding badge on the post updates to match.
+
+> **Note**: Scroll-to-post functionality is unreliable due to LinkedIn's virtual scrolling which removes posts from DOM when scrolled out of view. See [#32](../../issues/32).
 
 ### Filter Categories
 

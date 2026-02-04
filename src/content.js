@@ -618,21 +618,6 @@
       });
     });
 
-    listElement.querySelectorAll('.lpf-review-card').forEach((card) => {
-      card.addEventListener('click', (event) => {
-        // Don't scroll if clicking on buttons or expand
-        if (event.target.closest('button')) return;
-        const postId = card.dataset.postId;
-        console.log('[LPF] Card clicked, postId:', postId);
-        const element = findPostElement(postId);
-        console.log('[LPF] Found element:', element);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        } else {
-          showToast('Post no longer visible', 'info');
-        }
-      });
-    });
   }
 
   function handleReviewAction(event) {
