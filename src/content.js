@@ -156,7 +156,11 @@
       if (feedList) {
         const posts = findAllPosts();
         if (posts.length > 0) {
-          console.log('[LPF] Self-healing successful! Found', posts.length, 'posts with new pattern');
+          console.log(
+            '[LPF] Self-healing successful! Found',
+            posts.length,
+            'posts with new pattern'
+          );
           await sendMessage({ type: 'storeHealedSelectors', selectors: testSelectors });
           await sendMessage({ type: 'resetDetectionStats' });
           showToast('LinkedIn layout detected. Detection restored.', 'info');
