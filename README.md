@@ -12,9 +12,21 @@
 
 ## Status
 
-[**WIP**] Work in progress.  
+[**WIP**] Work in progress.
 LinkedOut is currently in a prototyping phase.
 
+## Table of Contents
+
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Architecture](#architecture)
+- [Usage](#usage)
+- [Cost Estimate](#cost-estimate)
+- [Privacy](#privacy)
+- [Legal Considerations](#legal-considerations)
+- [Development](#development)
+- [Known Limitations](#known-limitations)
+- [Roadmap](#roadmap)
 
 ## Features
 
@@ -144,7 +156,7 @@ When a post is filtered, a badge appears at the top of the post:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ ⊘  [CATEGORY]  Reason for filtering...        👁  ＋  －    │
+│ ⊘  [CATEGORY]  Reason for filtering...        👁  ◎  ○    │
 ├─────────────────────────────────────────────────────────────┤
 │                    (post content hidden)                    │
 └─────────────────────────────────────────────────────────────┘
@@ -156,10 +168,10 @@ When a post is filtered, a badge appears at the top of the post:
 | **[CATEGORY]** | The matched category (e.g., "Thought Leadership") |
 | **Reason** | Claude's explanation for why this post was filtered |
 | **👁 Preview** | Toggle post visibility — peek at the content without approving |
-| **＋ Keep** | Reject the filter — restore the post and train the model that this was a mistake |
-| **－ Filter** | Confirm the filter — keep it hidden and train the model that this was correct |
+| **◎ Hit** | Good filter — keep it hidden and train the model that this was correct |
+| **○ Miss** | Wrong filter — restore the post and train the model that this was a mistake |
 
-After you click **＋** or **－**, the buttons are replaced with a status label (**Confirmed** or **Rejected**).
+After you click **○** or **◎**, the buttons are replaced with a status label (**Confirmed** or **Rejected**).
 
 ### Review Panel
 
@@ -175,7 +187,7 @@ Click the floating **⊘** button (bottom-right of LinkedIn) to open the review 
 │  │ Author Name      [CATEGORY]   │  │
 │  │ Post preview text here...     │  │
 │  │ Reason • 87%                  │  │
-│  │ [✓ Filter]  [✗ Keep]  [↓]     │  │
+│  │ [◎ Hit]  [○ Miss]  [↓]        │  │
 │  └────────────────────────────────┘  │
 │  ...                                 │
 └──────────────────────────────────────┘
@@ -195,9 +207,8 @@ Click the floating **⊘** button (bottom-right of LinkedIn) to open the review 
 **Card actions:**
 | Button | Description |
 |--------|-------------|
-| **✓ Filter** | Confirm the filter decision (trains the model) |
-| **✗ Keep** | Reject the filter and restore the post |
-| **↓** | Scroll to this post in the feed |
+| **◎ Hit** | Good filter — confirm and hide the post (trains the model) |
+| **○ Miss** | Wrong filter — reject and restore the post |
 
 After confirming or rejecting, the card shows a status label and dims slightly. The corresponding badge on the post updates to match.
 
@@ -257,6 +268,60 @@ Using Haiku instead of Sonnet reduces costs by ~5×.
 - No data is sent anywhere else
 - All feedback and interaction history is stored locally
 - You can export or delete all data from Settings
+
+## Legal Considerations
+
+### What LinkedOut Is
+
+LinkedOut is **source code**, not a service. It does not:
+- Provide any service to users
+- Access LinkedIn on your behalf
+- Store, transmit, or process your data on any server
+- **Export any feed data** — unless you explicitly enable LLM classification by configuring your own API key
+
+The code is offered under the MIT license. **You** decide whether and how to use it. Any actions taken using this code are your responsibility.
+
+### LinkedIn's Service Guarantees
+
+LinkedIn's [User Agreement](https://www.linkedin.com/legal/user-agreement) provides services "AS IS" with no quality guarantees:
+
+> "LINKEDIN AND ITS AFFILIATES MAKE NO REPRESENTATION OR WARRANTY ABOUT THE SERVICES"
+
+They explicitly disclaim "FITNESS FOR A PARTICULAR PURPOSE" — meaning they make no promise that content will be professional, relevant, or high-quality.
+
+### How the Code Works
+
+| Activity | How It Works | Notes |
+|----------|--------------|-------|
+| Scraping | Does not scrape — reads DOM you already have access to | No automated data collection |
+| Bots/automation | No bots — user-initiated, client-side filtering | You control when it runs |
+| Display modification | Client-side only, your browser, your view | Like any browser extension |
+| External API | Post content sent to Anthropic for classification | Requires your API key and explicit setup |
+
+### Your Responsibilities
+
+By enabling the AI classification feature (providing your own API key), **you** — not LinkedOut:
+- Choose to send post content to a third-party API
+- Accept full responsibility for compliance with LinkedIn's Terms of Service
+- May be liable for any violation of LinkedIn's policies regarding data export
+- Acknowledge that this may have consequences for your LinkedIn account
+
+Without an API key configured, LinkedOut does not transmit any data externally.
+
+### Your Rights
+
+- You have [data portability rights](https://www.linkedin.com/legal/privacy-policy) under LinkedIn's Privacy Policy
+- You control what happens in your own browser
+- LinkedIn does not guarantee content quality — filtering noise is a reasonable personal choice
+
+### Disclaimer
+
+LinkedOut is source code provided "as is" under the MIT license, without warranty of any kind. The authors:
+- Do not provide any service
+- Are not responsible for how you use this code
+- Are not lawyers; nothing here is legal advice
+
+Review LinkedIn's [User Agreement](https://www.linkedin.com/legal/user-agreement) and [Privacy Policy](https://www.linkedin.com/legal/privacy-policy) to understand your own obligations.
 
 ## Development
 

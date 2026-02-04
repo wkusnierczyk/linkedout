@@ -175,14 +175,21 @@
 
     for (const element of allPosts) {
       const id = getPostId(element);
+
+      // Always tag the DOM element (LinkedIn may have re-rendered it)
+      element.dataset.lpfId = id;
+
+      // Re-apply filter visual if we have a classification for this post
+      if (state.classifications[id]?.filter && !element.querySelector('.lpf-badge')) {
+        applyFilterVisual(id, state.classifications[id]);
+      }
+
       if (state.processedPosts.has(id)) continue;
       state.processedPosts.add(id);
 
       const data = extractPostData(element);
       if (data.content.length < MIN_POST_LENGTH) continue;
 
-      // Tag the DOM element
-      element.dataset.lpfId = id;
       newPosts.push(data);
 
       // Attach interaction observers to this post
@@ -279,8 +286,8 @@
         <span class="lpf-badge__reason">${escHtml(classification.reason || '')}</span>
         <div class="lpf-badge__buttons">
           <button class="lpf-badge__btn lpf-badge__btn--preview" title="Preview this post">👁</button>
-          <button class="lpf-badge__btn lpf-badge__btn--reject" title="Keep this post">＋</button>
-          <button class="lpf-badge__btn lpf-badge__btn--approve" title="Remove this post">－</button>
+          <button class="lpf-badge__btn lpf-badge__btn--approve" title="Good filter — hide this post">◎</button>
+          <button class="lpf-badge__btn lpf-badge__btn--reject" title="Wrong filter — keep this post">○</button>
         </div>
       `;
 
@@ -560,19 +567,16 @@
           statusClass = 'lpf-review-card--confirmed';
           actionsHtml = `
             <span class="lpf-review-card__status lpf-review-card__status--confirmed">Confirmed</span>
-            <button class="lpf-btn lpf-btn--scroll" data-action="scroll" data-post-id="${escAttr(id)}" title="Scroll to post">↓</button>
           `;
         } else if (classification.rejected) {
           statusClass = 'lpf-review-card--rejected';
           actionsHtml = `
             <span class="lpf-review-card__status lpf-review-card__status--rejected">Rejected</span>
-            <button class="lpf-btn lpf-btn--scroll" data-action="scroll" data-post-id="${escAttr(id)}" title="Scroll to post">↓</button>
           `;
         } else {
           actionsHtml = `
-            <button class="lpf-btn lpf-btn--approve" data-action="approve" data-post-id="${escAttr(id)}" title="Yes, filter this">✓ Filter</button>
-            <button class="lpf-btn lpf-btn--reject" data-action="reject" data-post-id="${escAttr(id)}" title="No, keep this">✗ Keep</button>
-            <button class="lpf-btn lpf-btn--scroll" data-action="scroll" data-post-id="${escAttr(id)}" title="Scroll to post">↓</button>
+            <button class="lpf-btn lpf-btn--approve" data-action="approve" data-post-id="${escAttr(id)}" title="Good filter — hide this post">◎ Hit</button>
+            <button class="lpf-btn lpf-btn--reject" data-action="reject" data-post-id="${escAttr(id)}" title="Wrong filter — keep this post">○ Miss</button>
           `;
         }
 
@@ -595,7 +599,10 @@
       .join('');
 
     listElement.querySelectorAll('[data-action]').forEach((button) => {
-      button.addEventListener('click', handleReviewAction);
+      button.addEventListener('click', (event) => {
+        event.stopPropagation();
+        handleReviewAction(event);
+      });
     });
 
     listElement.querySelectorAll('.lpf-review-card__expand').forEach((button) => {
@@ -614,12 +621,6 @@
     const action = button.dataset.action;
     const postId = button.dataset.postId;
     const classification = state.classifications[postId];
-
-    if (action === 'scroll') {
-      const element = findPostElement(postId);
-      if (element) element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      return;
-    }
 
     const postElement = findPostElement(postId);
     const content = postElement ? getPostText(postElement) : '';
@@ -653,6 +654,11 @@
         badgeElement.innerHTML = '<span class="lpf-badge__confirmed">Confirmed</span>';
       }
       showToast('Filter confirmed', 'info');
+    }
+
+    // Scroll to the post
+    if (postElement) {
+      postElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
     // Re-render panel to show status
