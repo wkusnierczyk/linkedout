@@ -1,6 +1,32 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const settings = await chrome.runtime.sendMessage({ type: 'getSettings' });
 
+  // ─── Filter Mode ────────────────────────────────────────────────
+  const modeRadios = document.querySelectorAll('input[name="filterMode"]');
+  const modeHint = document.getElementById('mode-hint');
+  const apiSection = document.getElementById('api-section');
+  const modelSection = document.getElementById('model-section');
+
+  function updateModeUI(mode) {
+    const isLlm = mode === 'llm';
+    apiSection.style.display = isLlm ? 'block' : 'none';
+    modelSection.style.display = isLlm ? 'block' : 'none';
+    modeHint.textContent = isLlm
+      ? 'LLM mode sends post content to Anthropic API for classification.'
+      : 'Local mode uses regex patterns — no data leaves your browser.';
+  }
+
+  const currentMode = settings.filterMode || 'local';
+  for (const r of modeRadios) {
+    r.checked = r.value === currentMode;
+    r.addEventListener('change', async () => {
+      settings.filterMode = r.value;
+      await chrome.runtime.sendMessage({ type: 'saveSettings', settings });
+      updateModeUI(r.value);
+    });
+  }
+  updateModeUI(currentMode);
+
   // ─── API Key ──────────────────────────────────────────────────
   const apiKeyInput = document.getElementById('api-key');
   const keyStatus = document.getElementById('key-status');

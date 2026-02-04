@@ -15,6 +15,32 @@
   const INIT_RETRY_DELAY_MS = 500; // delay between init retries
   const INIT_MAX_RETRIES = 20; // max retries waiting for feed (10 seconds total)
 
+  // ─── UI Labels (for i18n support) ─────────────────────────────────
+
+  const LABELS = {
+    badge: {
+      previewPost: 'Preview this post',
+      approveFilter: 'Good filter — hide this post',
+      rejectFilter: 'Wrong filter — keep this post',
+      reFilter: 'Re-filter this post',
+      restorePost: 'Undo — restore this post',
+    },
+    panel: {
+      showMore: 'Show more',
+      showLess: 'Show less',
+      statusConfirmed: 'Confirmed',
+      statusRejected: 'Rejected',
+      buttonHit: '◎ Hit',
+      buttonMiss: '○ Miss',
+      buttonUndo: '◎ Undo',
+      buttonUndoMiss: '○ Undo',
+    },
+    toast: {
+      filterConfirmed: 'Filter confirmed',
+      postRestored: 'Post restored',
+    },
+  };
+
   // ─── State ───────────────────────────────────────────────────────
 
   const state = {
@@ -29,6 +55,22 @@
     contextValid: true, // tracks if extension context is still valid
     scanning: false, // tracks if classification is in progress
   };
+
+  // ─── State Management ─────────────────────────────────────────────
+
+  function updateClassification(postId, updates) {
+    const current = state.classifications[postId] || {};
+    state.classifications[postId] = { ...current, ...updates };
+    return state.classifications[postId];
+  }
+
+  function getClassification(postId) {
+    return state.classifications[postId];
+  }
+
+  function getPendingFilterCount() {
+    return Object.values(state.classifications).filter((c) => c.filter && !c.confirmed).length;
+  }
 
   // ─── Safe Messaging ─────────────────────────────────────────────
 
@@ -249,7 +291,6 @@
         return;
       }
 
-      let filterCount = 0;
       for (const result of response.results) {
         const postData = postDataById[result.id] || {};
         state.classifications[result.id] = {
@@ -258,12 +299,13 @@
           author: postData.author,
         };
         if (result.filter) {
-          filterCount++;
           applyFilterVisual(result.id, state.classifications[result.id]);
         }
       }
 
-      updateBadge(filterCount > 0 ? String(filterCount) : '');
+      // Use total pending count, not just this batch's count
+      const pendingCount = getPendingFilterCount();
+      updateBadge(pendingCount > 0 ? String(pendingCount) : '');
       if (state.panelOpen) renderPanelContent();
     }, BATCH_DELAY_MS);
   }
@@ -285,109 +327,156 @@
     }
 
     if (!element.querySelector('.lpf-badge')) {
-      const badge = document.createElement('div');
-      badge.className = 'lpf-badge';
-      updateBadgeState(badge, element, postId, classification);
+      const badge = createBadge(element, postId, classification);
       element.prepend(badge);
     }
   }
 
-  function updateBadgeState(badge, element, postId, classification) {
-    // Determine badge modifier class and button HTML based on state
-    badge.classList.remove('lpf-badge--confirmed', 'lpf-badge--rejected');
+  function createBadge(element, postId, classification) {
+    const badge = document.createElement('div');
+    badge.className = 'lpf-badge';
 
-    let buttonsHtml;
-    if (classification.rejected) {
-      // Rejected: green badge, show Hit button to undo
-      badge.classList.add('lpf-badge--rejected');
-      buttonsHtml = `
-        <button class="lpf-badge__btn lpf-badge__btn--approve" title="Re-filter this post">◎</button>
-      `;
-    } else if (classification.confirmed) {
-      // Confirmed: red badge, show Preview and Miss button to undo
-      badge.classList.add('lpf-badge--confirmed');
-      buttonsHtml = `
-        <button class="lpf-badge__btn lpf-badge__btn--preview" title="Preview this post">👁</button>
-        <button class="lpf-badge__btn lpf-badge__btn--reject" title="Undo — keep this post">○</button>
-      `;
-    } else {
-      // Pending: default badge, show all buttons
-      buttonsHtml = `
-        <button class="lpf-badge__btn lpf-badge__btn--preview" title="Preview this post">👁</button>
-        <button class="lpf-badge__btn lpf-badge__btn--approve" title="Good filter — hide this post">◎</button>
-        <button class="lpf-badge__btn lpf-badge__btn--reject" title="Wrong filter — keep this post">○</button>
-      `;
-    }
-
+    // Create all elements once — visibility controlled by CSS classes
     badge.innerHTML = `
       <span class="lpf-badge__icon">⊘</span>
       <span class="lpf-badge__label">${escHtml(classification.categoryLabel || 'Filtered')}</span>
       <span class="lpf-badge__reason">${escHtml(classification.reason || '')}</span>
-      <div class="lpf-badge__buttons">${buttonsHtml}</div>
+      <div class="lpf-badge__buttons">
+        <button class="lpf-badge__btn lpf-badge__btn--preview" title="${escAttr(LABELS.badge.previewPost)}">👁</button>
+        <button class="lpf-badge__btn lpf-badge__btn--approve" title="${escAttr(LABELS.badge.approveFilter)}">◎</button>
+        <button class="lpf-badge__btn lpf-badge__btn--reject" title="${escAttr(LABELS.badge.rejectFilter)}">○</button>
+      </div>
     `;
 
-    // Preview button
-    badge.querySelector('.lpf-badge__btn--preview')?.addEventListener('click', (event) => {
+    // Attach event listeners once
+    badge.querySelector('.lpf-badge__btn--preview').addEventListener('click', (event) => {
       event.stopPropagation();
       element.classList.toggle('lpf-filtered--revealed');
     });
 
-    // Approve button (Hit) - confirms filter or re-confirms after rejection
-    badge.querySelector('.lpf-badge__btn--approve')?.addEventListener('click', (event) => {
+    badge.querySelector('.lpf-badge__btn--approve').addEventListener('click', (event) => {
       event.stopPropagation();
-      const content = getPostText(element);
-      const author = getPostAuthor(element);
-      sendMessage({
-        type: 'recordFeedback',
-        postId,
-        content: content.slice(0, 500),
-        author,
-        category: classification?.category,
-        feedback: 'approved',
-      });
-      element.classList.add('lpf-filtered');
-      element.classList.remove('lpf-filtered--revealed');
-      state.classifications[postId] = {
-        ...state.classifications[postId],
-        filter: true,
-        confirmed: true,
-        rejected: false,
-      };
-      updateBadgeState(badge, element, postId, state.classifications[postId]);
-      if (state.panelOpen) renderPanelContent();
-      showToast('Filter confirmed', 'info');
-      updateBadge(
-        String(Object.values(state.classifications).filter((c) => c.filter && !c.confirmed).length)
-      );
+      handleFeedback(badge, element, postId, 'approved');
     });
 
-    // Reject button (Miss) - rejects filter or undoes confirmation
-    badge.querySelector('.lpf-badge__btn--reject')?.addEventListener('click', (event) => {
+    badge.querySelector('.lpf-badge__btn--reject').addEventListener('click', (event) => {
       event.stopPropagation();
-      const content = getPostText(element);
-      const author = getPostAuthor(element);
-      sendMessage({
-        type: 'recordFeedback',
-        postId,
-        content: content.slice(0, 500),
-        author,
-        category: classification?.category,
-        feedback: 'rejected',
-      });
-      element.classList.remove('lpf-filtered', 'lpf-filtered--revealed');
-      state.classifications[postId] = {
-        ...state.classifications[postId],
-        filter: false,
-        confirmed: false,
-        rejected: true,
-      };
-      updateBadgeState(badge, element, postId, state.classifications[postId]);
-      if (state.panelOpen) renderPanelContent();
-      showToast('Post restored', 'info');
-      updateBadge(
-        String(Object.values(state.classifications).filter((c) => c.filter && !c.confirmed).length)
-      );
+      handleFeedback(badge, element, postId, 'rejected');
     });
+
+    // Set initial visibility state
+    updateBadgeVisibility(badge, classification);
+
+    return badge;
+  }
+
+  function updateBadgeVisibility(badge, classification) {
+    // Update badge color class
+    badge.classList.remove('lpf-badge--confirmed', 'lpf-badge--rejected');
+
+    const previewBtn = badge.querySelector('.lpf-badge__btn--preview');
+    const approveBtn = badge.querySelector('.lpf-badge__btn--approve');
+    const rejectBtn = badge.querySelector('.lpf-badge__btn--reject');
+
+    if (classification.rejected) {
+      // Rejected: green badge, show only Hit button
+      badge.classList.add('lpf-badge--rejected');
+      previewBtn.classList.add('lpf-hidden');
+      approveBtn.classList.remove('lpf-hidden');
+      rejectBtn.classList.add('lpf-hidden');
+      approveBtn.title = LABELS.badge.reFilter;
+    } else if (classification.confirmed) {
+      // Confirmed: red badge, show Preview and Miss buttons
+      badge.classList.add('lpf-badge--confirmed');
+      previewBtn.classList.remove('lpf-hidden');
+      approveBtn.classList.add('lpf-hidden');
+      rejectBtn.classList.remove('lpf-hidden');
+      rejectBtn.title = LABELS.badge.restorePost;
+    } else {
+      // Pending: default badge, show all buttons
+      previewBtn.classList.remove('lpf-hidden');
+      approveBtn.classList.remove('lpf-hidden');
+      rejectBtn.classList.remove('lpf-hidden');
+      approveBtn.title = LABELS.badge.approveFilter;
+      rejectBtn.title = LABELS.badge.rejectFilter;
+    }
+  }
+
+  // ─── Feedback Processing (shared logic) ────────────────────────────
+
+  /**
+   * Process feedback action — updates state and records to background.
+   * Returns the updated classification.
+   * UI updates are handled separately by callers.
+   */
+  function processFeedback(postId, feedback, content, author) {
+    const classification = getClassification(postId);
+
+    // Record feedback to background
+    sendMessage({
+      type: 'recordFeedback',
+      postId,
+      content: content.slice(0, 500),
+      author,
+      category: classification?.category,
+      feedback,
+    });
+
+    // Update state through centralized function
+    if (feedback === 'approved') {
+      return updateClassification(postId, { filter: true, confirmed: true, rejected: false });
+    } else {
+      return updateClassification(postId, { filter: false, confirmed: false, rejected: true });
+    }
+  }
+
+  /**
+   * Apply visual changes to a post element based on classification state.
+   */
+  function applyPostElementClasses(element, classification) {
+    if (!element) return;
+
+    if (classification.rejected) {
+      // Rejected: remove filter styling
+      element.classList.remove('lpf-filtered', 'lpf-filtered--revealed');
+    } else if (classification.filter) {
+      // Filtered (pending or confirmed): apply filter styling
+      element.classList.add('lpf-filtered');
+      if (classification.confirmed) {
+        // Confirmed: ensure not revealed
+        element.classList.remove('lpf-filtered--revealed');
+      }
+    }
+  }
+
+  /**
+   * Refresh all dependent UI after a feedback action.
+   */
+  function refreshFeedbackUI() {
+    if (state.panelOpen) renderPanelContent();
+    const count = getPendingFilterCount();
+    updateBadge(count > 0 ? String(count) : '');
+  }
+
+  function handleFeedback(badge, element, postId, feedback) {
+    const content = getPostText(element);
+    const author = getPostAuthor(element);
+
+    // Process feedback (state + background)
+    const updated = processFeedback(postId, feedback, content, author);
+
+    // Apply element-specific visual changes
+    applyPostElementClasses(element, updated);
+
+    // Show appropriate toast
+    showToast(
+      feedback === 'approved' ? LABELS.toast.filterConfirmed : LABELS.toast.postRestored,
+      'info'
+    );
+
+    // Update badge visibility and refresh UI
+    updateBadgeVisibility(badge, updated);
+    refreshFeedbackUI();
   }
 
   // ─── Interaction Observation ────────────────────────────────────
@@ -608,21 +697,21 @@
           // Confirmed: show Miss button to undo
           statusClass = 'lpf-review-card--confirmed';
           actionsHtml = `
-            <span class="lpf-review-card__status lpf-review-card__status--confirmed">Confirmed</span>
-            <button class="lpf-btn lpf-btn--reject" data-action="reject" data-post-id="${escAttr(id)}" title="Undo — keep this post">○ Undo</button>
+            <span class="lpf-review-card__status lpf-review-card__status--confirmed">${escHtml(LABELS.panel.statusConfirmed)}</span>
+            <button class="lpf-btn lpf-btn--reject" data-action="reject" data-post-id="${escAttr(id)}" title="${escAttr(LABELS.badge.restorePost)}">${escHtml(LABELS.panel.buttonUndoMiss)}</button>
           `;
         } else if (classification.rejected) {
           // Rejected: show Hit button to undo
           statusClass = 'lpf-review-card--rejected';
           actionsHtml = `
-            <span class="lpf-review-card__status lpf-review-card__status--rejected">Rejected</span>
-            <button class="lpf-btn lpf-btn--approve" data-action="approve" data-post-id="${escAttr(id)}" title="Re-filter this post">◎ Undo</button>
+            <span class="lpf-review-card__status lpf-review-card__status--rejected">${escHtml(LABELS.panel.statusRejected)}</span>
+            <button class="lpf-btn lpf-btn--approve" data-action="approve" data-post-id="${escAttr(id)}" title="${escAttr(LABELS.badge.reFilter)}">${escHtml(LABELS.panel.buttonUndo)}</button>
           `;
         } else {
           // Pending: show both buttons
           actionsHtml = `
-            <button class="lpf-btn lpf-btn--approve" data-action="approve" data-post-id="${escAttr(id)}" title="Good filter — hide this post">◎ Hit</button>
-            <button class="lpf-btn lpf-btn--reject" data-action="reject" data-post-id="${escAttr(id)}" title="Wrong filter — keep this post">○ Miss</button>
+            <button class="lpf-btn lpf-btn--approve" data-action="approve" data-post-id="${escAttr(id)}" title="${escAttr(LABELS.badge.approveFilter)}">${escHtml(LABELS.panel.buttonHit)}</button>
+            <button class="lpf-btn lpf-btn--reject" data-action="reject" data-post-id="${escAttr(id)}" title="${escAttr(LABELS.badge.rejectFilter)}">${escHtml(LABELS.panel.buttonMiss)}</button>
           `;
         }
 
@@ -633,7 +722,7 @@
             <span class="lpf-review-card__category">${escHtml(classification.categoryLabel || 'Unknown')}</span>
           </div>
           <div class="lpf-review-card__preview lpf-review-card__preview--collapsed">${fullContent}</div>
-          <button class="lpf-review-card__expand">Show more</button>
+          <button class="lpf-review-card__expand">${escHtml(LABELS.panel.showMore)}</button>
           <div class="lpf-review-card__reason">
             <em>${escHtml(classification.reason || '')}</em>
             <span class="lpf-review-card__confidence">${confidencePercent}%</span>
@@ -657,7 +746,7 @@
         const card = button.closest('.lpf-review-card');
         const preview = card.querySelector('.lpf-review-card__preview');
         const collapsed = preview.classList.toggle('lpf-review-card__preview--collapsed');
-        button.textContent = collapsed ? 'Show more' : 'Show less';
+        button.textContent = collapsed ? LABELS.panel.showMore : LABELS.panel.showLess;
       });
     });
   }
@@ -666,62 +755,34 @@
     const button = event.currentTarget;
     const action = button.dataset.action;
     const postId = button.dataset.postId;
-    const classification = state.classifications[postId];
+    const feedback = action === 'approve' ? 'approved' : 'rejected';
 
     const postElement = findPostElement(postId);
     const content = postElement ? getPostText(postElement) : '';
     const author = postElement ? getPostAuthor(postElement) : 'Unknown';
-    const feedback = action === 'approve' ? 'approved' : 'rejected';
 
-    sendMessage({
-      type: 'recordFeedback',
-      postId,
-      content: content.slice(0, 500),
-      author,
-      category: classification?.category,
-      feedback,
-    });
+    // Process feedback (state + background)
+    const updated = processFeedback(postId, feedback, content, author);
 
-    // Update classification state
-    if (action === 'reject') {
-      state.classifications[postId] = {
-        ...classification,
-        filter: false,
-        confirmed: false,
-        rejected: true,
-      };
-      if (postElement) {
-        postElement.classList.remove('lpf-filtered', 'lpf-filtered--revealed');
-      }
-      showToast('Post restored', 'info');
-    } else {
-      state.classifications[postId] = {
-        ...classification,
-        filter: true,
-        confirmed: true,
-        rejected: false,
-      };
-      if (postElement) {
-        postElement.classList.add('lpf-filtered');
-        postElement.classList.remove('lpf-filtered--revealed');
-      }
-      showToast('Filter confirmed', 'info');
-    }
+    // Apply element-specific visual changes
+    applyPostElementClasses(postElement, updated);
 
-    // Update badge on the post using the same function for consistency
+    // Show appropriate toast
+    showToast(
+      feedback === 'approved' ? LABELS.toast.filterConfirmed : LABELS.toast.postRestored,
+      'info'
+    );
+
+    // Update badge visibility if element exists
     if (postElement) {
       const badge = postElement.querySelector('.lpf-badge');
       if (badge) {
-        updateBadgeState(badge, postElement, postId, state.classifications[postId]);
+        updateBadgeVisibility(badge, updated);
       }
     }
 
-    // Re-render panel to show updated status
-    renderPanelContent();
-
-    updateBadge(
-      String(Object.values(state.classifications).filter((c) => c.filter && !c.confirmed).length)
-    );
+    // Refresh UI
+    refreshFeedbackUI();
   }
 
   function updateBadge(text) {

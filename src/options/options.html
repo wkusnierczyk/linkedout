@@ -10,6 +10,21 @@
       <h1>LinkedOut Settings</h1>
 
       <section>
+        <h2>Classification Mode</h2>
+        <div class="radio-group">
+          <label>
+            <input type="radio" name="filterMode" value="local" />
+            Local (privacy-first, no API calls)
+          </label>
+          <label>
+            <input type="radio" name="filterMode" value="llm" />
+            LLM (more accurate, requires API key)
+          </label>
+        </div>
+        <p id="mode-hint" class="hint"></p>
+      </section>
+
+      <section id="api-section">
         <h2>API Key</h2>
         <div class="field">
           <input type="password" id="api-key" placeholder="sk-ant-..." />
@@ -18,7 +33,7 @@
         <p id="key-status" class="hint"></p>
       </section>
 
-      <section>
+      <section id="model-section">
         <h2>Model</h2>
         <select id="model-select">
           <option value="claude-sonnet-4-20250514">Sonnet 4 (recommended)</option>

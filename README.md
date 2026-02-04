@@ -19,6 +19,8 @@ LinkedOut is currently in a prototyping phase.
 
 - [Features](#features)
 - [Quick Start](#quick-start)
+- [Classification Modes](#classification-modes)
+- [How Learning Works](#how-learning-works)
 - [Architecture](#architecture)
 - [Usage](#usage)
 - [Cost Estimate](#cost-estimate)
@@ -56,6 +58,227 @@ See [Known Limitations](#known-limitations) and [Roadmap](#roadmap) for the full
 2. **Configure**: Click ⊘ → Settings → enter your [Anthropic API key](https://console.anthropic.com/settings/keys)
 3. **Browse**: Go to [LinkedIn](https://www.linkedin.com/feed) — posts are scanned automatically
 4. **Review**: Click the floating ⊘ button to see filtered posts and provide feedback
+
+## Classification Modes
+
+LinkedOut offers two classification modes, selectable in Settings:
+
+| Mode | Privacy | Accuracy | Cost | Learning |
+|------|---------|----------|------|----------|
+| **Local** (default) | All processing in browser | Good for common patterns | Free | Learns from feedback |
+| **LLM** | Post content sent to Anthropic API | Better nuance detection | ~$0.30/month | Learns from feedback + builds preference profile |
+
+### Local Mode (Default)
+
+Local mode uses regex pattern matching to classify posts entirely within your browser. **No data leaves your device.**
+
+**How it works:**
+
+1. **Pattern Matching**: Each post is checked against regex patterns for 7 categories:
+   - AI-Generated: Formulaic phrases like "in today's fast-paced world", buzzwords like "synergy", "leverage"
+   - Thought Leadership: "unpopular opinion", "X lessons I learned", "grateful to announce"
+   - Engagement Bait: "Agree?", "thoughts?", "tag someone who..."
+   - Self-Promotion: "check out my", "link in bio", "we're hiring"
+   - Politics: Political figures, partisan language, policy debates
+   - Rage Bait: Generational attacks, "wake up sheeple", intentionally divisive content
+   - Corporate Fluff: "excited to announce", "strategic partnership", award spam
+
+2. **Sensitivity Levels**: Control how aggressive filtering is:
+   | Level | Threshold | Confidence |
+   |-------|-----------|------------|
+   | Low | 2+ pattern matches required | Base 0.40 + 0.15 per match |
+   | Medium | 1+ pattern matches required | Base 0.50 + 0.15 per match |
+   | High | 1+ pattern matches required | Base 0.60 + 0.20 per match |
+
+3. **Learning Adjustments**: Confidence is adjusted based on learned data (see [How Learning Works](#how-learning-works))
+
+**Limitations:**
+- Pattern-based detection may miss nuanced content
+- Some patterns have known limitations (emoji patterns, quoted text)
+- Cannot detect novel categories not covered by patterns
+
+### LLM Mode
+
+LLM mode sends post content to the Anthropic API for classification using Claude. **Requires API key.**
+
+**How it works:**
+
+1. **Prompt Construction**: Each batch of posts is sent with:
+   - All category definitions (built-in and custom)
+   - Current sensitivity level
+   - Recent feedback examples (last 20)
+   - Learned preference profile (if available)
+   - Custom keyword triggers
+
+2. **Claude Analysis**: Claude analyzes each post and returns:
+   - Whether to filter (true/false)
+   - Category classification
+   - Confidence score (0.0–1.0)
+   - Explanation of reasoning
+
+3. **Learning**: Feedback updates the preference profile (see [How Learning Works](#how-learning-works))
+
+**Advantages:**
+- Better at detecting nuanced content
+- Understands context and intent
+- Can identify novel problematic patterns
+- Adapts via natural language preference profile
+
+**Considerations:**
+- Requires Anthropic API key
+- Post content (up to 1500 chars) sent to external API
+- Costs ~$0.30/month for typical use
+- See [Legal Considerations](#legal-considerations)
+
+## How Learning Works
+
+Both modes learn from your feedback to improve over time. The learning mechanisms differ by mode.
+
+### Feedback Signals
+
+LinkedOut captures these signals from your behavior:
+
+| Signal | Source | Meaning |
+|--------|--------|---------|
+| **Approve filter (Hit)** | Click ◎ on filtered post | Correct filter — I want this hidden |
+| **Reject filter (Miss)** | Click ○ on filtered post | Wrong filter — I want to see this |
+| **Like** | Click reaction on any post | I enjoy this content |
+| **Comment** | Comment on any post | I'm engaged with this content |
+| **Share/Repost** | Share any post | I endorse this content |
+| **Hide posts by user** | Use LinkedIn's hide option | I don't want content from this author |
+| **Unfollow** | Unfollow a user | Strong signal against this author |
+
+### Local Mode Learning
+
+Local mode maintains three learning data structures in browser storage:
+
+#### 1. Author Reputation
+
+Tracks a score per author based on your interactions:
+
+| Signal | Impact |
+|--------|--------|
+| Reject filter (false positive) | +2 |
+| Like / Comment / Share | +3 |
+| Approve filter (true positive) | -1 |
+| Not interested | -2 |
+| Hide posts by user | -10 |
+| Unfollow | -10 |
+
+**Effect on classification:**
+
+| Reputation | Adjustment |
+|------------|------------|
+| < -5 | Boost filter confidence +10% |
+| < -10 | Boost filter confidence +20% |
+| > +5 | Reduce filter confidence -15% |
+| > +10 | Reduce filter confidence -30% |
+| > +20 | **Skip filtering entirely** (trusted author) |
+
+#### 2. Learned Keywords
+
+Keywords are extracted from posts when you give feedback:
+
+| Feedback | Action |
+|----------|--------|
+| Reject filter / Like / Comment | Extract keywords → add to **keep** list |
+| Approve filter / Not interested | Extract keywords → add to **filter** list |
+
+**Effect on classification:**
+- Keep keywords in content → reduce confidence (-10% per keyword, max -30%)
+- Filter keywords in content → boost confidence (+10% per keyword, max +30%)
+
+#### 3. Pattern Statistics
+
+Tracks hit/miss rate for each regex pattern:
+
+| Pattern | Hits | Misses | Accuracy |
+|---------|------|--------|----------|
+| `in today's fast-paced` | 15 | 3 | 83% |
+| `excited to announce` | 8 | 7 | 53% |
+
+**Effect on classification:**
+- Patterns with <50% accuracy have reduced weight
+- Weight scales from 0.5 (0% accuracy) to 1.5 (100% accuracy)
+
+#### Storage Location
+
+Learning data is stored in `chrome.storage.local` under the key `learningData`:
+
+```javascript
+{
+  authorReputation: { "john smith": 5, "jane doe": -12 },
+  learnedKeywords: {
+    keep: ["kubernetes", "rust", "engineering"],
+    filter: ["hustle", "grind", "motivated"]
+  },
+  patternStats: {
+    "in today's fast-paced": { hits: 15, misses: 3 },
+    "excited to announce": { hits: 8, misses: 7 }
+  }
+}
+```
+
+**Note:** This data is not currently viewable or editable through the UI. You can export all extension data from Settings → Export Data, which includes learning data as JSON.
+
+### LLM Mode Learning
+
+LLM mode uses two learning mechanisms:
+
+#### 1. Feedback Examples
+
+The last 20 feedback items are included in each classification prompt:
+
+```
+## Recent Feedback Examples
+- [CORRECTLY FILTERED] Category: thought_leadership | "I'm humbled to announce..."
+- [WRONGLY FILTERED] Category: engagement_bait | "What programming language should I learn?"
+```
+
+This gives Claude immediate context about your preferences.
+
+#### 2. Preference Profile
+
+After every 25 feedback items, Claude generates a natural language summary of your preferences:
+
+```
+This user dislikes:
+- Generic motivational content and humble brags
+- Posts that start with rhetorical questions designed to drive engagement
+- Corporate announcements with excessive enthusiasm
+
+This user tolerates:
+- Technical discussions even if they use some jargon
+- Job postings when they're informative rather than promotional
+- Questions that seem genuine rather than engagement-seeking
+
+Nuances:
+- The user seems fine with self-promotion if it's genuinely informative
+- Political content is okay if it's policy-focused rather than partisan
+```
+
+This profile is:
+- **Viewable** in Settings → Learned Preference Profile
+- **Regenerable** manually via the "Regenerate Now" button
+- **Included** in every subsequent classification prompt
+
+**Note:** The preference profile is human-readable but not directly editable. To influence it, provide more feedback — the profile regenerates every 25 feedback items.
+
+### Manual Configuration
+
+While learned data isn't directly editable, you can guide filtering through Settings:
+
+| Setting | Effect |
+|---------|--------|
+| **Custom Keywords** | Posts containing these words are always flagged |
+| **Custom Categories** | Define new category types with descriptions |
+| **Category Toggles** | Enable/disable built-in categories |
+| **Sensitivity** | Control filtering aggressiveness |
+
+**Future improvements** (not yet implemented):
+- Author allowlist/blocklist UI
+- Learned keywords viewer/editor
+- Import/export of learning data separately from full export
 
 ## Architecture
 

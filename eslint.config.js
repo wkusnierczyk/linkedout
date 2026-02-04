@@ -6,7 +6,7 @@ export default [
   },
   {
     files: ['src/**/*.js'],
-    ignores: ['src/utils.js'],
+    ignores: ['src/utils.js', 'src/background.js', 'src/patterns.js'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'script', // Chrome extension content scripts are not ES modules
@@ -52,6 +52,26 @@ export default [
     rules: {
       'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
       'no-undef': 'error',
+      'prefer-const': 'error',
+      'no-var': 'error',
+      eqeqeq: ['error', 'always'],
+    },
+  },
+  {
+    files: ['src/background.js', 'src/patterns.js', 'src/learning.js'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module', // ES modules for service worker
+      globals: {
+        console: 'readonly',
+        fetch: 'readonly',
+        chrome: 'readonly',
+      },
+    },
+    rules: {
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      'no-undef': 'error',
+      'no-console': 'off',
       'prefer-const': 'error',
       'no-var': 'error',
       eqeqeq: ['error', 'always'],
