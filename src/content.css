@@ -11,7 +11,7 @@
   --lpf-text-secondary: #a0a0b0;
   --lpf-text-muted: #8888a0;
   --lpf-text-highlight: #c0c0d0;
-  --lpf-text-on-color: var(--lpf-text-on-color);
+  --lpf-text-on-color: #fff;
   --lpf-border-subtle: #334;
   --lpf-border-dark: #445;
   --lpf-border-light: #556;
