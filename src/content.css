@@ -89,6 +89,11 @@
 
 /* ─── Fold Mode (all posts collapsed) ─────────────────────────── */
 
+/* When a filtered post is also folded, the filtered-revealed state should win */
+.lpf-folded.lpf-filtered--revealed > *:not(.lpf-badge) {
+  display: revert;
+}
+
 .lpf-folded > *:not(.lpf-badge) {
   display: none;
 }
