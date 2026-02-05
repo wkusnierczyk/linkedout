@@ -6,11 +6,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   const modeHint = document.getElementById('mode-hint');
   const apiSection = document.getElementById('api-section');
   const modelSection = document.getElementById('model-section');
+  const consentBox = document.getElementById('llm-consent');
+  const consentCheckbox = document.getElementById('llm-consent-checkbox');
 
   function updateModeUI(mode) {
     const isLlm = mode === 'llm';
     apiSection.style.display = isLlm ? 'block' : 'none';
     modelSection.style.display = isLlm ? 'block' : 'none';
+    consentBox.style.display = isLlm ? 'block' : 'none';
     modeHint.textContent = isLlm
       ? 'LLM mode sends post content to Anthropic API for classification.'
       : 'Local mode uses regex patterns — no data leaves your browser.';
@@ -26,6 +29,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
   updateModeUI(currentMode);
+
+  // ─── LLM Consent ────────────────────────────────────────────────
+  consentCheckbox.checked = settings.llmConsent || false;
+  consentCheckbox.addEventListener('change', async () => {
+    settings.llmConsent = consentCheckbox.checked;
+    settings.llmConsentTimestamp = consentCheckbox.checked ? Date.now() : null;
+    await chrome.runtime.sendMessage({ type: 'saveSettings', settings });
+  });
 
   // ─── API Key ──────────────────────────────────────────────────
   const apiKeyInput = document.getElementById('api-key');
