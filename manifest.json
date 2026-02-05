@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Post Filter",
-  "version": "0.1.0",
-  "version_name": "0.1.0-beta",
+  "version": "0.1.1",
+  "version_name": "0.1.1-beta",
   "description": "AI-powered LinkedIn feed filter that learns from your preferences",
   "permissions": ["storage"],
   "host_permissions": ["https://www.linkedin.com/*", "https://api.anthropic.com/*"],
