@@ -5,7 +5,8 @@
     </td>
     <td>
       <p><strong>LinkedOut</strong>: Adaptive LinkedIn Post Filter</p>
-      An AI-powered Chrome extension that filters your LinkedIn feed using Claude to classify posts, learns from your feedback, and adapts to your preferences over time.
+      A Chrome extension that filters your LinkedIn feed, learning from your feedback, and adapting to your preferences over time.
+      Optionally, the extesnsion uses an LLM to implement AI-powered filters to classify posts.
     </td>
   </tr>
 </table>
