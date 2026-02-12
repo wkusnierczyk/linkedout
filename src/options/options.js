@@ -41,8 +41,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ─── API Key ──────────────────────────────────────────────────
   const apiKeyInput = document.getElementById('api-key');
   const keyStatus = document.getElementById('key-status');
+  const deleteKeyButton = document.getElementById('delete-key-btn');
   const { configured } = await chrome.runtime.sendMessage({ type: 'checkApiKey' });
   keyStatus.textContent = configured ? 'API key is configured.' : 'No API key set.';
+  deleteKeyButton.hidden = !configured;
 
   document.getElementById('save-key-btn').addEventListener('click', async () => {
     const key = apiKeyInput.value.trim();
@@ -50,6 +52,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     await chrome.storage.local.set({ apiKey: key });
     keyStatus.textContent = 'API key saved.';
     apiKeyInput.value = '';
+    deleteKeyButton.hidden = false;
+  });
+
+  deleteKeyButton.addEventListener('click', async () => {
+    await chrome.storage.local.remove('apiKey');
+    keyStatus.textContent = 'API key deleted.';
+    apiKeyInput.value = '';
+    deleteKeyButton.hidden = true;
   });
 
   // ─── Model ────────────────────────────────────────────────────
