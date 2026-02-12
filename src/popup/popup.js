@@ -10,8 +10,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     chrome.runtime.sendMessage({ type: 'checkApiKey' }),
   ]);
 
-  // API key warning
-  if (!apiStatus.configured) {
+  // API key warning (only relevant in LLM mode)
+  if (!apiStatus.configured && settings.filterMode === 'llm') {
     apiWarning.hidden = false;
   }
 
