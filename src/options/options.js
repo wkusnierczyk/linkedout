@@ -50,6 +50,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     await chrome.storage.local.set({ apiKey: key });
     keyStatus.textContent = 'API key saved.';
     apiKeyInput.value = '';
+    deleteKeyButton.hidden = false;
+  });
+
+  const deleteKeyButton = document.getElementById('delete-key-btn');
+  deleteKeyButton.hidden = !configured;
+  deleteKeyButton.addEventListener('click', async () => {
+    await chrome.storage.local.remove('apiKey');
+    keyStatus.textContent = 'API key deleted.';
+    apiKeyInput.value = '';
+    deleteKeyButton.hidden = true;
   });
 
   // ─── Model ────────────────────────────────────────────────────
